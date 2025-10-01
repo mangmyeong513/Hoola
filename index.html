@@ -3,69 +3,168 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hoola (훌라) — 귀염뽀짝 2.5D MVP</title>
+  <title>Hoola (훌라) — 네온 3D 아레나</title>
   <style>
     :root{
-      --bg:#f7f7fb; --ink:#1d2230; --muted:#7a839a; --primary:#8ea8ff; --accent:#ffd1e8; --ok:#8be28b; --warn:#ffc66b; --danger:#ff7b8a;
-      --card:#fff; --shadow: 0 8px 18px rgba(20,24,40,.12), 0 2px 6px rgba(20,24,40,.08);
-      --radius:18px;
+      --bg:#050712;
+      --ink:#e6ebff;
+      --ink-soft:rgba(198,206,255,.75);
+      --muted:#7a89c9;
+      --primary:#6b92ff;
+      --accent:#ff82d3;
+      --ok:#8be28b;
+      --warn:#ffc66b;
+      --danger:#ff7b8a;
+      --card:#111831;
+      --card-face:#1c2340;
+      --shadow:0 20px 36px rgba(6,9,28,.55);
+      --radius:20px;
+      --seat-glow:0 18px 42px rgba(103,132,255,.55);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;font-family:ui-rounded,system-ui,Segoe UI,Apple SD Gothic Neo,Pretendard,Roboto,sans-serif;background:
-      radial-gradient(1200px 600px at 10% -10%, #eef2ff 0%, transparent 60%),
-      radial-gradient(800px 400px at 110% 0%, #ffe9f4 0%, transparent 60%), var(--bg); color:var(--ink)}
-    .app{display:grid;grid-template-rows:auto 1fr auto; gap:12px; height:100%; max-width:1200px; margin:0 auto; padding:14px}
-    header{display:flex; align-items:center; justify-content:space-between}
-    header h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.2px}
-    header .opts{display:flex; gap:8px; align-items:center; color:var(--muted)}
-    .board{display:grid; grid-template-columns: 1fr 320px; gap:16px; height:100%}
-    .table{position:relative; border-radius:24px; box-shadow: var(--shadow); padding:14px; overflow:auto;
-      background: linear-gradient(180deg,#f9fbff,#eef3ff);
-      background-image:
-        radial-gradient(1200px 600px at 50% -20%, rgba(255,255,255,.8) 0%, rgba(255,255,255,0) 60%),
-        repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0 1px, transparent 1px 32px);
+    body{
+      margin:0;
+      font-family:"Pretendard",ui-rounded,system-ui,Segoe UI,Apple SD Gothic Neo,Roboto,sans-serif;
+      background:
+        radial-gradient(1200px 620px at 5% -10%, rgba(77,102,255,.35) 0%, transparent 60%),
+        radial-gradient(800px 520px at 95% -20%, rgba(255,130,211,.28) 0%, transparent 70%),
+        linear-gradient(180deg,#050712 0%, #0a0f24 70%, #04030b 100%);
+      color:var(--ink);
     }
-    .right{display:flex; flex-direction:column; gap:12px}
-    .panel{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:12px}
-    .zones{display:grid; grid-template-columns: repeat(3, 1fr); gap:12px}
-    .zone{background:#fff; border-radius:18px; box-shadow:var(--shadow); padding:10px; min-height:110px; display:flex; flex-direction:column; gap:6px}
-    .zone h3{margin:0 0 6px 0; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
-
-    /* card visuals */
-    .cards{display:flex; align-items:flex-end; flex-wrap:wrap; gap:8px}
-    .card{width:70px; height:98px; border-radius:16px; background:var(--card); box-shadow: var(--shadow); position:relative; transform:translateZ(0); transition:.25s transform, .25s box-shadow, .25s opacity; cursor:pointer; user-select:none}
-    .card:hover{transform:translateY(-6px) rotate(-.6deg)}
-    .card .inner{position:absolute; inset:0; border-radius:inherit; display:grid; place-items:center; padding:6px}
+    .app{display:grid;grid-template-rows:auto 1fr auto; gap:16px; height:100%; max-width:1320px; margin:0 auto; padding:20px}
+    header{display:flex; align-items:center; justify-content:space-between; gap:16px}
+    header h1{font-size:20px;margin:0;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#fff;text-shadow:0 0 18px rgba(107,146,255,.55)}
+    header .opts{display:flex; gap:12px; align-items:center; color:var(--ink-soft); flex-wrap:wrap}
+    header .opts label{display:flex; align-items:center; gap:6px; background:rgba(14,21,45,.6); padding:8px 12px; border-radius:14px; border:1px solid rgba(115,140,255,.22)}
+    header .opts select{background:rgba(9,14,30,.8); border:1px solid rgba(115,140,255,.4); border-radius:10px; padding:6px 26px 6px 10px; color:var(--ink); font-weight:600}
+    header .opts select:disabled{opacity:.5}
+    header .opts .badge{background:rgba(15,20,44,.9); color:var(--ink-soft)}
+    .board{display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:20px; height:100%}
+    .table{position:relative; display:flex; flex-direction:column; gap:22px; overflow:visible}
+    .arena{position:relative; border-radius:36px; padding:34px; background:radial-gradient(circle at 50% 30%, rgba(107,146,255,.35) 0%, rgba(35,47,105,.6) 45%, rgba(8,10,25,.9) 100%); box-shadow:0 40px 80px rgba(5,9,35,.55), inset 0 0 0 1px rgba(129,149,255,.2);}
+    .arena-stage{position:relative; width:100%; aspect-ratio:4/3; margin:0 auto; perspective:1600px; transform-style:preserve-3d}
+    .arena-surface{position:absolute; inset:0; border-radius:46px; background:linear-gradient(135deg, rgba(25,32,72,.95) 0%, rgba(9,13,34,.92) 50%, rgba(19,28,66,.95) 100%); transform:rotateX(58deg); transform-style:preserve-3d; box-shadow:inset 0 24px 60px rgba(18,27,76,.65), inset 0 -32px 40px rgba(5,7,18,.95), 0 60px 140px rgba(4,6,18,.75)}
+    .arena-surface::after{content:""; position:absolute; inset:-24px; border-radius:56px; background:radial-gradient(circle at 50% 0%, rgba(103,132,255,.45), transparent 60%); opacity:.65; filter:blur(28px); pointer-events:none}
+    .arena .zones{position:absolute; inset:12% 14%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; transform-style:preserve-3d; transform:translateZ(120px)}
+    .arena .zone{background:linear-gradient(180deg, rgba(26,36,84,.92) 0%, rgba(18,24,60,.88) 100%); border-radius:20px; border:1px solid rgba(142,162,255,.25); box-shadow:0 28px 45px rgba(2,4,14,.55), inset 0 8px 16px rgba(120,142,255,.15); padding:12px; min-height:120px; display:flex; flex-direction:column; gap:10px; color:var(--ink)}
+    .zone h3{margin:0; font-size:12px; letter-spacing:.6px; text-transform:uppercase; color:rgba(198,206,255,.75)}
+    .seat-layer{position:absolute; inset:0; transform-style:preserve-3d; pointer-events:none; --orbit:48%;}
+    .seat{position:absolute; left:50%; top:50%; width:148px; transform:rotateZ(var(--angle)) translateY(calc(-1 * var(--orbit))) rotateZ(calc(var(--angle) * -1)) translateZ(140px); transform-origin:center; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 14px; border-radius:16px; background:rgba(12,17,39,.92); color:#f8f9ff; box-shadow:0 18px 42px rgba(6,9,24,.55); border:1px solid rgba(122,150,255,.3); text-shadow:0 0 8px rgba(107,146,255,.6); transition:transform .35s ease, box-shadow .35s ease, opacity .35s ease}
+    .seat[data-turn="true"]{background:linear-gradient(180deg, rgba(108,149,255,.95) 0%, rgba(73,105,255,.95) 100%); box-shadow:var(--seat-glow); color:#060b21}
+    .seat[data-status="out"]{opacity:.4; text-shadow:none}
+    .seat .seat-name{font-weight:700; font-size:14px}
+    .seat .seat-meta{font-size:12px; opacity:.85}
+    .seat[data-bot="true"] .seat-name::after{content:"🤖"; margin-left:6px}
+    .seat[data-bot="false"] .seat-name::after{content:"🙂"; margin-left:6px}
+    .seat[data-turn="true"] .seat-name::after{content:"🔥"; margin-left:6px}
+    .seat-layer::after{content:""; position:absolute; inset:8%; border-radius:50%; border:1px dashed rgba(128,150,255,.28); transform:translateZ(80px)}
+    .right{display:flex; flex-direction:column; gap:16px}
+    .panel{background:rgba(12,17,40,.85); border-radius:22px; box-shadow:0 20px 36px rgba(4,7,20,.6); padding:16px; border:1px solid rgba(114,138,255,.18); color:var(--ink)}
+    .panel strong{color:#fff; letter-spacing:.3px}
+    .panel small{color:var(--ink-soft)}
+    .table-panels{display:flex; flex-direction:column; gap:16px}
+    .panel.hand{position:sticky; bottom:0; background:linear-gradient(180deg, rgba(16,22,47,.95) 0%, rgba(10,14,32,.92) 100%)}
+    .hud{display:flex; flex-wrap:wrap; gap:10px}
+    button{appearance:none; border:none; background:linear-gradient(180deg,#3d4fff,#2836ff); color:#fff; padding:10px 14px; border-radius:14px; font-weight:700; cursor:pointer; box-shadow:0 14px 28px rgba(39,51,158,.5); letter-spacing:.2px}
+    button.ghost{background:rgba(16,24,58,.85); color:var(--ink); border:1px solid rgba(115,140,255,.4); box-shadow:none}
+    button:disabled{opacity:.4; cursor:not-allowed; box-shadow:none}
+    .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(12,18,42,.75); box-shadow:0 10px 20px rgba(4,6,14,.45); font-size:12px; color:var(--ink-soft)}
+    .board .badge{background:rgba(18,25,60,.8)}
+    .zones .cards{display:flex; align-items:flex-end; flex-wrap:wrap; gap:8px}
+    .card{width:70px; height:98px; border-radius:18px; background:var(--card); box-shadow:0 18px 30px rgba(2,4,14,.65); position:relative; transform:translateZ(0); transition:.25s transform, .25s box-shadow, .25s opacity; cursor:pointer; user-select:none; border:1px solid rgba(120,146,255,.18)}
+    .card::before{content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(135deg, rgba(255,255,255,.12), transparent 60%); opacity:.8; mix-blend-mode:screen}
+    .card:hover{transform:translateY(-10px) rotateX(6deg) rotateZ(-1deg); box-shadow:0 24px 45px rgba(2,4,14,.75)}
+    .card .inner{position:absolute; inset:0; border-radius:inherit; display:grid; place-items:center; padding:8px; background:var(--card-face)}
     .rank{font-weight:900; font-size:22px}
     .suit{font-size:18px}
-    .red{color:#e34d5c} .black{color:#2b2f3a}
-    .selected{outline:3px solid var(--primary); outline-offset:0}
+    .red{color:#ff8b9d} .black{color:#90a2ff}
+    .selected{outline:3px solid var(--accent); outline-offset:0}
     .disabled{opacity:.45; pointer-events:none}
-
-    /* meld stack */
-    .meld{padding:12px; border-radius:14px; background:linear-gradient(180deg,#ffffff,#f7f9ff); box-shadow:var(--shadow); animation:pop .25s ease}
-    .meld .cards{gap: -46px}
+    .meld{padding:12px; border-radius:18px; background:linear-gradient(180deg, rgba(30,38,88,.9), rgba(14,20,44,.88)); box-shadow:0 18px 30px rgba(4,6,18,.55); border:1px solid rgba(115,138,255,.25); animation:pop .25s ease}
+    .meld .cards{gap:-46px}
     .meld .card{transform:rotate(0)}
+    .log{font-size:12px; color:var(--ink-soft); max-height:160px; overflow:auto}
+    .rankpill{display:inline-block;background:rgba(78,102,215,.25);color:#aebcff;padding:4px 10px;border-radius:999px;font-weight:700}
+    .toast{position:fixed; right:16px; bottom:16px; background:#111827; color:#fff; padding:12px 16px; border-radius:14px; opacity:.95; animation:slideup .25s ease; box-shadow:0 18px 34px rgba(4,6,18,.6)}
+    .pill{display:inline-block; padding:3px 8px; border-radius:999px; background:#313c7a; color:#bfc9ff; font-weight:700}
 
-    .hand{position:sticky; bottom:0}
+    /* layout helpers */
+    .cards{display:flex; align-items:flex-end; flex-wrap:wrap; gap:10px}
+    .hand .cards{justify-content:center}
+    .zone .hud{justify-content:space-between}
+    .panel-title{margin:0 0 10px 0; color:var(--ink-soft); font-size:13px; letter-spacing:.4px}
+    .hand-header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px}
+    .hand-header h3{margin:0; color:var(--ink); letter-spacing:.4px}
+    .panel.hand .hud{justify-content:flex-end}
+    .panel.hand .hud button{flex:1 1 auto; min-width:118px}
+    .meld-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px}
+    .panel .hud button{flex:1 1 auto}
+    .panel .hud button.ghost{border-color:rgba(131,151,255,.5)}
 
-    .hud{display:flex; flex-wrap:wrap; gap:8px}
-    button{appearance:none; border:none; background:var(--ink); color:#fff; padding:10px 12px; border-radius:14px; font-weight:700; cursor:pointer; box-shadow: var(--shadow)}
-    button.ghost{background:#fff; color:var(--ink); border:2px solid #e8ebff}
-    button:disabled{opacity:.4; cursor:not-allowed}
-    .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#fff; box-shadow:var(--shadow); font-size:12px; color:var(--muted)}
+    .panel-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px}
+    #deckCount{display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; color:#fff}
+    #discardCards{min-height:60px}
+    .button-row{display:flex; gap:10px; flex-wrap:wrap}
+    .button-row button{flex:1 1 auto}
+    .button-row .badge{flex:0 0 auto}
+    .net-io{display:flex; flex-direction:column; gap:8px; margin-top:10px}
+    textarea{background:rgba(10,15,32,.9); border:1px solid rgba(120,140,255,.35); border-radius:14px; padding:10px; color:var(--ink); width:100%; min-height:80px; resize:vertical; font-family:inherit}
+    textarea[readonly]{opacity:.7}
+    button.danger{background:linear-gradient(180deg,#ff7b8a,#ff4d6b); box-shadow:0 16px 28px rgba(255,77,121,.4)}
+    .player-line{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0; padding:8px 12px; border-radius:12px; background:rgba(18,24,58,.45); border:1px solid rgba(112,134,255,.18); color:var(--ink-soft)}
+    .player-name{display:flex; align-items:center; gap:6px}
+    .player-type{font-size:16px; color:#fff}
+    .player-line[data-turn="true"]{background:rgba(105,138,255,.25); border-color:rgba(155,176,255,.55); color:#fff}
+    .player-line[data-status="out"]{opacity:.45}
+    .player-line .rankpill{background:rgba(96,118,255,.25); color:#d7deff}
+    footer{display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--ink-soft); background:rgba(10,14,32,.85); padding:14px 20px; border-radius:20px; border:1px solid rgba(120,140,255,.2); box-shadow:0 20px 34px rgba(3,5,18,.5); margin-top:8px}
+    footer button{min-width:120px}
 
-    .log{font-size:12px; color:var(--muted); max-height:160px; overflow:auto}
-    .rankpill{display:inline-block;background:#eef1ff;color:#5364c7;padding:2px 8px;border-radius:999px;font-weight:700}
+    @media (max-width: 1180px){
+      .seat-layer{--orbit:44%}
+      .seat{width:132px}
+    }
 
-    .toast{position:fixed; right:16px; bottom:16px; background:#111827; color:#fff; padding:10px 12px; border-radius:12px; opacity:.95; animation:slideup .25s ease}
-    .pill{display:inline-block; padding:3px 8px; border-radius:999px; background:#eef4ff; color:#4b61d1; font-weight:700}
+    @media (max-width: 1024px){
+      .app{padding:16px; gap:14px}
+      header{flex-direction:column; align-items:flex-start}
+      header .opts{width:100%; justify-content:flex-start}
+      .board{grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto; gap:18px}
+      .right{order:-1}
+      .arena{padding:26px}
+      .arena-stage{aspect-ratio:5/4}
+      .arena-surface{transform:rotateX(54deg)}
+      .seat-layer{--orbit:42%}
+    }
 
+    @media (max-width: 780px){
+      header h1{text-align:center; width:100%; font-size:18px}
+      header .opts{flex-direction:column; align-items:stretch}
+      header .opts label{width:100%}
+      .board{gap:14px}
+      .arena{padding:18px}
+      .arena-stage{aspect-ratio:1.1}
+      .arena-surface{transform:rotateX(48deg)}
+      .seat{width:122px; padding:10px 12px}
+      .seat-layer{--orbit:40%}
+      .panel.hand .hud{flex-wrap:wrap; justify-content:center}
+      .panel.hand .hud button{flex:1 1 calc(50% - 8px); min-width:0}
+    }
+
+    @media (max-width: 540px){
+      .app{padding:12px}
+      .arena{padding:16px}
+      .seat-layer{display:none}
+      .arena-surface{transform:rotateX(42deg)}
+      .cards{justify-content:center}
+    }
     /* animations */
     @keyframes slideup{from{transform:translateY(12px); opacity:0} to{transform:translateY(0); opacity:1}}
     @keyframes pop{from{transform:scale(.96)} to{transform:scale(1)}}
     @keyframes drop{from{transform:translateY(-10px); opacity:.6} to{transform:translateY(0); opacity:1}}
+    @keyframes pulse{from{transform:translateY(0);} to{transform:translateY(-4px);}}
+    .pulse{animation:pulse .8s ease-in-out infinite alternate}
     .enter{animation:drop .2s ease}
 
     /* fly animations */
@@ -77,75 +176,94 @@
 <body>
   <div class="app">
     <header>
-      <h1>Hoola · 귀염뽀짝 2.5D</h1>
+      <h1>Hoola · 네온 3D Arena</h1>
       <div class="opts">
-        <label><input type="checkbox" id="opt-continue" /> 아웃 후 계속(순위 확정)</label>
+        <label><input type="checkbox" id="opt-continue" /> <span>아웃 후 계속(순위 확정)</span></label>
+        <label>
+          <span>플레이어 수</span>
+          <select id="opt-seats">
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </label>
         <span class="badge" id="turnBadge">턴: -</span>
       </div>
     </header>
 
     <div class="board">
       <div class="table" id="table">
-        <div class="zones">
-          <div class="zone" id="deckZone">
-            <h3>DECK</h3>
-            <div class="cards" id="deckCount"></div>
-            <div class="hud"><button id="btnDraw">드로우</button><button id="btnTY" class="ghost">땡큐</button></div>
-          </div>
-          <div class="zone" id="discardZone">
-            <h3>DISCARD</h3>
-            <div class="cards" id="discardCards"></div>
-          </div>
-          <div class="zone" id="infoZone">
-            <h3>INFO</h3>
-            <div class="log" id="log"></div>
-          </div>
-        </div>
-
-        <div style="height:10px"></div>
-        <div class="panel">
-          <h3 style="margin:0 0 6px 0;color:var(--muted)">TABLE MELDS</h3>
-          <div id="melds" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px"></div>
-        </div>
-
-        <div style="height:10px"></div>
-        <div class="panel hand">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
-            <h3 style="margin:0;color:var(--muted)">YOUR HAND</h3>
-            <div class="hud">
-              <button id="btnRegSet" class="ghost">세트 등록</button>
-              <button id="btnRegRun" class="ghost">런 등록</button>
-              <button id="btnAttach" class="ghost">붙이기</button>
-              <button id="btnDiscard" style="background:var(--danger)" disabled>버리고 종료</button>
+        <div class="arena" id="arena">
+          <div class="arena-stage">
+            <div class="arena-surface">
+              <div class="zones">
+                <div class="zone" id="deckZone">
+                  <h3>DECK</h3>
+                  <div class="cards" id="deckCount"></div>
+                  <div class="hud"><button id="btnDraw">드로우</button><button id="btnTY" class="ghost">땡큐</button></div>
+                </div>
+                <div class="zone" id="discardZone">
+                  <h3>DISCARD</h3>
+                  <div class="cards" id="discardCards"></div>
+                </div>
+                <div class="zone" id="infoZone">
+                  <h3>INFO</h3>
+                  <div class="log" id="log"></div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="cards" id="hand"></div>
+          <div class="seat-layer" id="arenaSeats"></div>
+        </div>
+
+        <div class="table-panels">
+          <div class="panel">
+            <h3 class="panel-title">TABLE MELDS</h3>
+            <div id="melds" class="meld-grid"></div>
+          </div>
+          <div class="panel hand">
+            <div class="hand-header">
+              <h3>YOUR HAND</h3>
+              <div class="hud">
+                <button id="btnRegSet" class="ghost">세트 등록</button>
+                <button id="btnRegRun" class="ghost">런 등록</button>
+                <button id="btnAttach" class="ghost">붙이기</button>
+                <button id="btnDiscard" class="danger" disabled>버리고 종료</button>
+              </div>
+            </div>
+            <div class="cards" id="hand"></div>
+          </div>
         </div>
       </div>
 
       <aside class="right">
         <div class="panel">
-          <div style="display:flex; align-items:center; justify-content:space-between">
+          <div class="panel-head">
             <strong>Players</strong>
             <span class="pill" id="roundInfo">R1</span>
           </div>
           <div id="players"></div>
         </div>
         <div class="panel">
-          <strong>Finish Order</strong>
+          <div class="panel-head">
+            <strong>Finish Order</strong>
+          </div>
           <ol id="finish"></ol>
         </div>
         <div class="panel">
-          <strong>온라인 플레이(베타)</strong>
-          <div style="display:flex; gap:8px; margin:8px 0">
+          <div class="panel-head">
+            <strong>온라인 플레이(베타)</strong>
+          </div>
+          <div class="button-row">
             <button id="btnHost" class="ghost">호스트</button>
             <button id="btnJoin" class="ghost">게스트</button>
           </div>
-          <small style="color:var(--muted)">SDP 코드를 복사/붙여넣기로 연결합니다(서버 없이 P2P).</small>
-          <div style="margin-top:8px">
-            <textarea id="sdpIn" placeholder="상대 코드 붙여넣기" style="width:100%; height:80px; border-radius:12px; padding:8px; border:1px solid #e5e9ff"></textarea>
-            <textarea id="sdpOut" placeholder="내 코드" style="width:100%; height:80px; border-radius:12px; padding:8px; border:1px solid #e5e9ff; margin-top:6px" readonly></textarea>
-            <div style="display:flex; gap:6px; margin-top:6px">
+          <small>SDP 코드를 복사/붙여넣기로 연결합니다(서버 없이 P2P).</small>
+          <div class="net-io">
+            <textarea id="sdpIn" placeholder="상대 코드 붙여넣기"></textarea>
+            <textarea id="sdpOut" placeholder="내 코드" readonly></textarea>
+            <div class="button-row">
               <button id="btnApply" class="ghost">코드 적용</button>
               <span class="badge" id="netBadge">오프라인</span>
             </div>
@@ -154,8 +272,8 @@
       </aside>
     </div>
 
-    <footer style="display:flex; align-items:center; justify-content:space-between; color:var(--muted)">
-      <div>MVP: 1 Human + 1 Bot · 규칙: 드로우/땡큐 → 등록/붙이기(선택) → 버리기</div>
+    <footer>
+      <div>최소 3명 · 최대 6명 · 부족 시 봇 자동 충원 · 규칙: 드로우/땡큐 → 등록/붙이기 → 버리기</div>
       <button id="btnReset" class="ghost">새 게임</button>
     </footer>
   </div>
@@ -176,6 +294,26 @@ function buildDeck(){
 function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 function rankValue(r){ if(r==='A') return 1; if(r==='J') return 11; if(r==='Q') return 12; if(r==='K') return 13; return parseInt(r,10); }
 function sortByRank(cards){ return [...cards].sort((a,b)=>rankValue(a.rank)-rankValue(b.rank)); }
+
+const MIN_PLAYERS = 3;
+const MAX_PLAYERS = 6;
+const BOT_NAMES = ['봇 라라','봇 쿠루','봇 피피','봇 모모','봇 네오','봇 지지','봇 토토','봇 루루'];
+
+function clampSeatCount(n){
+  const num = Number(n);
+  if(Number.isNaN(num)) return MIN_PLAYERS;
+  return Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, Math.round(num)));
+}
+
+function botNameFor(index){
+  const base = BOT_NAMES[index % BOT_NAMES.length];
+  const suffix = index >= BOT_NAMES.length ? ` ${Math.floor(index / BOT_NAMES.length) + 1}` : '';
+  return base + suffix;
+}
+
+function createPlayer(id, name, isBot){
+  return { id, name, isBot, hand:[], status:'active' };
+}
 
 // ====== Meld validation ======
 function isSet(cards){ if(cards.length<3) return false; const r = cards[0].rank; return cards.every(c=>c.rank===r); }
@@ -240,7 +378,7 @@ const state = {
   turnIndex: 0,
   phase: 'choose-source', // choose-source | action | gameover
   finishOrder: [],
-  options: { continueAfterOut: true },
+  options: { continueAfterOut: true, totalSeats: 4 },
   round: 1,
   mustUseThankYouCardId: null,
   ty: { open:false, claimant:null, fromPlayerId:null, cardId:null }, // 땡큐 선착순 락
@@ -250,15 +388,31 @@ function newGame(){
   state.deck = buildDeck();
   state.discard = [];
   state.melds = [];
-  state.players = [
-    { id:'P1', name:'You', isBot:false, hand:[], status:'active' },
-    { id:'P2', name:'Bot', isBot:true, hand:[], status:'active' },
-  ];
-  state.turnIndex = 0; state.phase='choose-source'; state.finishOrder=[]; state.round=1; state.mustUseThankYouCardId=null;
+  state.options.totalSeats = clampSeatCount(state.options.totalSeats ?? MIN_PLAYERS);
+  const seats = state.options.totalSeats;
+  const roster = [];
+  const youLabel = net.online ? (net.isHost ? 'You(Host)' : 'You') : 'You';
+  roster.push(createPlayer('P1', youLabel, false));
+  if(net.online){
+    roster.push(createPlayer('P2', net.isHost ? 'Guest' : 'Host', false));
+  }
+  let botIndex = 0;
+  while(roster.length < seats){
+    const id = `P${roster.length+1}`;
+    roster.push(createPlayer(id, botNameFor(botIndex++), true));
+  }
+  state.players = roster;
+  state.turnIndex = 0;
+  state.phase='choose-source';
+  state.finishOrder=[];
+  state.round=1;
+  state.mustUseThankYouCardId=null;
   state.ty={open:false, claimant:null, fromPlayerId:null, cardId:null};
   for(let i=0;i<7;i++) state.players.forEach(p=>p.hand.push(state.deck.pop()));
-  state.discard.push(state.deck.pop());
-  drawUI(); logMsg('게임 시작!');
+  if(state.deck.length){ state.discard.push(state.deck.pop()); }
+  clearSelection();
+  drawUI();
+  logMsg(`게임 시작! (${state.players.length}인 테이블)`);
   maybeBotTurn();
 }
 
@@ -503,52 +657,114 @@ async function botActAsync(delay){
 
 // ====== UI ======
 function drawUI(){
-  document.getElementById('opt-continue').checked = state.options.continueAfterOut;
-  document.getElementById('turnBadge').textContent = `턴: ${current().name}`;
-  document.getElementById('roundInfo').textContent = `R${state.round}${state.phase==='gameover'?' · 게임끝':''}`;
+  state.options.totalSeats = clampSeatCount(state.options.totalSeats ?? MIN_PLAYERS);
+  const continueEl = document.getElementById('opt-continue');
+  if(continueEl){ continueEl.checked = state.options.continueAfterOut; }
+  const seatSelect = document.getElementById('opt-seats');
+  if(seatSelect){
+    const desired = String(state.options.totalSeats);
+    if(seatSelect.value !== desired) seatSelect.value = desired;
+    seatSelect.disabled = net.online && !net.isHost;
+  }
+  const activeTurn = state.players[state.turnIndex];
+  const turnBadge = document.getElementById('turnBadge');
+  if(turnBadge){
+    if(activeTurn){ turnBadge.textContent = `턴: ${activeTurn.name} · ${activeTurn.hand.length}장`; }
+    else { turnBadge.textContent = '턴: -'; }
+  }
+  const roundInfo = document.getElementById('roundInfo');
+  if(roundInfo){ roundInfo.textContent = `R${state.round}${state.phase==='gameover'?' · 게임끝':''}`; }
+  const deckCount = document.getElementById('deckCount');
+  if(deckCount){ deckCount.textContent = state.deck.length ? `${state.deck.length}장 남음` : '덱 비었음'; }
 
-  const deckCount = document.getElementById('deckCount'); deckCount.textContent = `남은 장수: ${state.deck.length}`;
+  const seatLayer = document.getElementById('arenaSeats');
+  if(seatLayer){
+    seatLayer.innerHTML='';
+    const total = state.players.length || 1;
+    state.players.forEach((p, idx)=>{
+      const seat=document.createElement('div');
+      seat.className='seat';
+      seat.style.setProperty('--angle', `${(360/total)*idx}deg`);
+      seat.dataset.turn = String(state.turnIndex===idx);
+      seat.dataset.status = p.status;
+      seat.dataset.bot = String(p.isBot);
+      const nameEl=document.createElement('div');
+      nameEl.className='seat-name';
+      nameEl.textContent=p.name;
+      const meta=document.createElement('div');
+      meta.className='seat-meta';
+      meta.textContent = p.status==='active'?`${p.hand.length}장 보유`:'OUT';
+      seat.appendChild(nameEl);
+      seat.appendChild(meta);
+      seatLayer.appendChild(seat);
+    });
+  }
 
-  const dc = document.getElementById('discardCards'); dc.innerHTML='';
-  const top = state.discard[state.discard.length-1]; if(top) { const el=cardEl(top,false); el.classList.add('enter'); dc.appendChild(el); }
+  const dc = document.getElementById('discardCards');
+  if(dc){
+    dc.innerHTML='';
+    const top = state.discard[state.discard.length-1];
+    if(top){ const el=cardEl(top,false); el.classList.add('enter'); dc.appendChild(el); }
+  }
 
-  const mwrap = document.getElementById('melds'); mwrap.innerHTML='';
-  state.melds.forEach((m,i)=>{
-    const d=document.createElement('div'); d.className='meld enter';
-    const title=document.createElement('div'); title.style.fontSize='12px'; title.style.color='var(--muted)';
-    title.textContent = `#${i+1} · ${m.kind.toUpperCase()} (${m.cards.length})`;
-    const row=document.createElement('div'); row.className='cards';
-    m.cards.forEach(c=>{ const el=cardEl(c,false); el.classList.add('enter'); row.appendChild(el); });
-    d.appendChild(title); d.appendChild(row); mwrap.appendChild(d);
-  });
+  const mwrap = document.getElementById('melds');
+  if(mwrap){
+    mwrap.innerHTML='';
+    state.melds.forEach((m,i)=>{
+      const d=document.createElement('div'); d.className='meld enter';
+      const title=document.createElement('div'); title.className='panel-title';
+      title.textContent = `#${i+1} · ${m.kind.toUpperCase()} (${m.cards.length})`;
+      const row=document.createElement('div'); row.className='cards';
+      m.cards.forEach(c=>{ const el=cardEl(c,false); el.classList.add('enter'); row.appendChild(el); });
+      d.appendChild(title); d.appendChild(row); mwrap.appendChild(d);
+    });
+  }
 
-  const h = document.getElementById('hand'); h.innerHTML='';
+  const handEl = document.getElementById('hand');
+  if(handEl){
+    handEl.innerHTML='';
+    const me = state.players[0];
+    if(me){
+      me.hand.sort((a,b)=> (a.suit===b.suit? rankValue(a.rank)-rankValue(b.rank) : a.suit.localeCompare(b.suit)));
+      me.hand.forEach(c=>{ const el=cardEl(c,true); el.classList.add('enter'); handEl.appendChild(el); });
+    }
+  }
+
+  const plist=document.getElementById('players');
+  if(plist){
+    plist.innerHTML='';
+    state.players.forEach((p,idx)=>{
+      const line=document.createElement('div');
+      line.className='player-line';
+      line.dataset.turn = String(state.turnIndex===idx);
+      line.dataset.status = p.status;
+      line.dataset.bot = String(p.isBot);
+      const left=document.createElement('div');
+      left.className='player-name';
+      const nameSpan=document.createElement('span'); nameSpan.textContent=p.name;
+      const typeSpan=document.createElement('span'); typeSpan.className='player-type'; typeSpan.textContent = p.isBot?'🤖':'🙂';
+      left.appendChild(nameSpan); left.appendChild(typeSpan);
+      const right=document.createElement('div'); right.innerHTML = `<span class="rankpill">${p.status==='active'?`${p.hand.length}장`:'OUT'}</span>`;
+      line.appendChild(left); line.appendChild(right); plist.appendChild(line);
+    });
+  }
+
+  const finish=document.getElementById('finish');
+  if(finish){
+    finish.innerHTML='';
+    state.finishOrder.forEach((pid,idx)=>{
+      const li=document.createElement('li'); const nm = state.players.find(p=>p.id===pid)?.name||pid; li.textContent = `${idx+1}등 · ${nm}`; finish.appendChild(li);
+    });
+  }
+
   const me = state.players[0];
-  me.hand.sort((a,b)=> (a.suit===b.suit? rankValue(a.rank)-rankValue(b.rank) : a.suit.localeCompare(b.suit)));
-  me.hand.forEach(c=> { const el=cardEl(c,true); el.classList.add('enter'); h.appendChild(el); });
-
-  const plist=document.getElementById('players'); plist.innerHTML='';
-  state.players.forEach((p)=>{
-    const line=document.createElement('div'); line.style.display='flex'; line.style.justifyContent='space-between'; line.style.margin='6px 0';
-    const left=document.createElement('div'); left.textContent = `${p.name} ${p.isBot?'🤖':'🙂'}`;
-    const right=document.createElement('div'); right.innerHTML = `<span class="rankpill">${p.status==='active'?`hand ${p.hand.length}`:'OUT'}</span>`;
-    line.appendChild(left); line.appendChild(right); plist.appendChild(line);
-  });
-
-  const f=document.getElementById('finish'); f.innerHTML='';
-  state.finishOrder.forEach((pid,idx)=>{
-    const li=document.createElement('li'); const nm = state.players.find(p=>p.id===pid)?.name||pid; li.textContent = `${idx+1}등 · ${nm}`; f.appendChild(li);
-  });
-
-  const meTurn = current().id==='P1' && state.players[0].status==='active' && state.phase!=='gameover';
+  const meTurn = me && activeTurn && activeTurn.id==='P1' && me.status==='active' && state.phase!=='gameover';
   document.getElementById('btnDraw').disabled = !meTurn || state.phase!=='choose-source';
-  // 땡큐 버튼: 선착순 창 열려 있고, 내가 선점 안 당했고, 즉시 사용 가능해야 함
-  const tyCheck = legalThankYouFor(state.players[0]);
   const tyBtn=document.getElementById('btnTY');
+  const tyCheck = me ? legalThankYouFor(me) : {allowed:false};
   tyBtn.disabled = !(state.ty.open && (!state.ty.claimant || state.ty.claimant==='P1') && tyCheck.allowed);
   tyBtn.classList.toggle('pulse', !tyBtn.disabled);
 }
-
 function cardEl(card, selectable){
   const d=document.createElement('div'); d.className='card'; d.dataset.id=card.id; if(selectable) d.addEventListener('click',()=>toggleSelect(card.id,d));
   const inner=document.createElement('div'); inner.className='inner';
@@ -613,8 +829,8 @@ async function guestStart(){
 async function hostApplyAnswer(){ const ansStr = document.getElementById('sdpIn').value.trim(); if(!ansStr) return showToast('게스트 코드를 붙여넣으세요'); const ans = JSON.parse(atob(ansStr)); await net.pc.setRemoteDescription(ans); }
 function wireDataChannel(dc){
   dc.onopen=()=>{ net.online=true; netBadge().textContent='온라인'; netBadge().style.background='#eaffea'; netBadge().style.color='#137a13';
-    state.players = [ { id:'P1', name: net.isHost? 'You(Host)':'You', isBot:false, hand:[], status:'active' }, { id:'P2', name: net.isHost? 'Guest':'Host', isBot:false, hand:[], status:'active' }, ];
     if(net.isHost){ newGame(); sendSnapshot(); }
+    else { drawUI(); }
   };
   dc.onmessage=(e)=>{
     const msg = JSON.parse(e.data);
@@ -696,6 +912,14 @@ elPendDiscard.onclick=()=>{
 };
 
 document.getElementById('opt-continue').addEventListener('change', (e)=>{ state.options.continueAfterOut = e.target.checked; sendSnapshot(); });
+document.getElementById('opt-seats').addEventListener('change', (e)=>{
+  const next = clampSeatCount(e.target.value);
+  if(state.options.totalSeats===next){ e.target.value = String(next); return; }
+  state.options.totalSeats = next;
+  showToast(`${next}인 테이블로 새 게임!`);
+  newGame();
+  sendSnapshot();
+});
 
 elReset.onclick=()=>{ newGame(); sendSnapshot(); };
 
