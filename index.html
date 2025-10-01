@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hoola (훌라) — 귀염뽀짝 2.5D MVP</title>
+  <style>
+    :root{
+      --bg:#f7f7fb; --ink:#1d2230; --muted:#7a839a; --primary:#8ea8ff; --accent:#ffd1e8; --ok:#8be28b; --warn:#ffc66b; --danger:#ff7b8a;
+      --card:#fff; --shadow: 0 8px 18px rgba(20,24,40,.12), 0 2px 6px rgba(20,24,40,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;font-family:ui-rounded,system-ui,Segoe UI,Apple SD Gothic Neo,Pretendard,Roboto,sans-serif;background:
+      radial-gradient(1200px 600px at 10% -10%, #eef2ff 0%, transparent 60%),
+      radial-gradient(800px 400px at 110% 0%, #ffe9f4 0%, transparent 60%), var(--bg); color:var(--ink)}
+    .app{display:grid;grid-template-rows:auto 1fr auto; gap:12px; height:100%; max-width:1200px; margin:0 auto; padding:14px}
+    header{display:flex; align-items:center; justify-content:space-between}
+    header h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.2px}
+    header .opts{display:flex; gap:8px; align-items:center; color:var(--muted)}
+    .board{display:grid; grid-template-columns: 1fr 320px; gap:16px; height:100%}
+    .table{position:relative; border-radius:24px; box-shadow: var(--shadow); padding:14px; overflow:auto;
+      background: linear-gradient(180deg,#f9fbff,#eef3ff);
+      background-image:
+        radial-gradient(1200px 600px at 50% -20%, rgba(255,255,255,.8) 0%, rgba(255,255,255,0) 60%),
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0 1px, transparent 1px 32px);
+    }
+    .right{display:flex; flex-direction:column; gap:12px}
+    .panel{background:#fff; border-radius:20px; box-shadow: var(--shadow); padding:12px}
+    .zones{display:grid; grid-template-columns: repeat(3, 1fr); gap:12px}
+    .zone{background:#fff; border-radius:18px; box-shadow:var(--shadow); padding:10px; min-height:110px; display:flex; flex-direction:column; gap:6px}
+    .zone h3{margin:0 0 6px 0; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
+
+    /* card visuals */
+    .cards{display:flex; align-items:flex-end; flex-wrap:wrap; gap:8px}
+    .card{width:70px; height:98px; border-radius:16px; background:var(--card); box-shadow: var(--shadow); position:relative; transform:translateZ(0); transition:.25s transform, .25s box-shadow, .25s opacity; cursor:pointer; user-select:none}
+    .card:hover{transform:translateY(-6px) rotate(-.6deg)}
+    .card .inner{position:absolute; inset:0; border-radius:inherit; display:grid; place-items:center; padding:6px}
+    .rank{font-weight:900; font-size:22px}
+    .suit{font-size:18px}
+    .red{color:#e34d5c} .black{color:#2b2f3a}
+    .selected{outline:3px solid var(--primary); outline-offset:0}
+    .disabled{opacity:.45; pointer-events:none}
+
+    /* meld stack */
+    .meld{padding:12px; border-radius:14px; background:linear-gradient(180deg,#ffffff,#f7f9ff); box-shadow:var(--shadow); animation:pop .25s ease}
+    .meld .cards{gap: -46px}
+    .meld .card{transform:rotate(0)}
+
+    .hand{position:sticky; bottom:0}
+
+    .hud{display:flex; flex-wrap:wrap; gap:8px}
+    button{appearance:none; border:none; background:var(--ink); color:#fff; padding:10px 12px; border-radius:14px; font-weight:700; cursor:pointer; box-shadow: var(--shadow)}
+    button.ghost{background:#fff; color:var(--ink); border:2px solid #e8ebff}
+    button:disabled{opacity:.4; cursor:not-allowed}
+    .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#fff; box-shadow:var(--shadow); font-size:12px; color:var(--muted)}
+
+    .log{font-size:12px; color:var(--muted); max-height:160px; overflow:auto}
+    .rankpill{display:inline-block;background:#eef1ff;color:#5364c7;padding:2px 8px;border-radius:999px;font-weight:700}
+
+    .toast{position:fixed; right:16px; bottom:16px; background:#111827; color:#fff; padding:10px 12px; border-radius:12px; opacity:.95; animation:slideup .25s ease}
+    .pill{display:inline-block; padding:3px 8px; border-radius:999px; background:#eef4ff; color:#4b61d1; font-weight:700}
+
+    /* animations */
+    @keyframes slideup{from{transform:translateY(12px); opacity:0} to{transform:translateY(0); opacity:1}}
+    @keyframes pop{from{transform:scale(.96)} to{transform:scale(1)}}
+    @keyframes drop{from{transform:translateY(-10px); opacity:.6} to{transform:translateY(0); opacity:1}}
+    .enter{animation:drop .2s ease}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Hoola · 귀염뽀짝 2.5D</h1>
+      <div class="opts">
+        <label><input type="checkbox" id="opt-continue" /> 아웃 후 계속(순위 확정)</label>
+        <span class="badge" id="turnBadge">턴: -</span>
+      </div>
+    </header>
+
+    <div class="board">
+      <div class="table" id="table">
+        <div class="zones">
+          <div class="zone" id="deckZone">
+            <h3>DECK</h3>
+            <div class="cards" id="deckCount"></div>
+            <div class="hud"><button id="btnDraw">드로우</button><button id="btnTY" class="ghost">땡큐</button></div>
+          </div>
+          <div class="zone" id="discardZone">
+            <h3>DISCARD</h3>
+            <div class="cards" id="discardCards"></div>
+          </div>
+          <div class="zone" id="infoZone">
+            <h3>INFO</h3>
+            <div class="log" id="log"></div>
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+        <div class="panel">
+          <h3 style="margin:0 0 6px 0;color:var(--muted)">TABLE MELDS</h3>
+          <div id="melds" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px"></div>
+        </div>
+
+        <div style="height:10px"></div>
+        <div class="panel hand">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
+            <h3 style="margin:0;color:var(--muted)">YOUR HAND</h3>
+            <div class="hud">
+              <button id="btnRegSet" class="ghost">세트 등록</button>
+              <button id="btnRegRun" class="ghost">런 등록</button>
+              <button id="btnAttach" class="ghost">붙이기</button>
+              <button id="btnDiscard" style="background:var(--danger)" disabled>버리고 종료</button>
+            </div>
+          </div>
+          <div class="cards" id="hand"></div>
+        </div>
+      </div>
+
+      <aside class="right">
+        <div class="panel">
+          <div style="display:flex; align-items:center; justify-content:space-between">
+            <strong>Players</strong>
+            <span class="pill" id="roundInfo">R1</span>
+          </div>
+          <div id="players"></div>
+        </div>
+        <div class="panel">
+          <strong>Finish Order</strong>
+          <ol id="finish"></ol>
+        </div>
+        <div class="panel">
+          <strong>온라인 플레이(베타)</strong>
+          <div style="display:flex; gap:8px; margin:8px 0">
+            <button id="btnHost" class="ghost">호스트</button>
+            <button id="btnJoin" class="ghost">게스트</button>
+          </div>
+          <small style="color:var(--muted)">SDP 코드를 복사/붙여넣기로 연결합니다(서버 없이 P2P).</small>
+          <div style="margin-top:8px">
+            <textarea id="sdpIn" placeholder="상대 코드 붙여넣기" style="width:100%; height:80px; border-radius:12px; padding:8px; border:1px solid #e5e9ff"></textarea>
+            <textarea id="sdpOut" placeholder="내 코드" style="width:100%; height:80px; border-radius:12px; padding:8px; border:1px solid #e5e9ff; margin-top:6px" readonly></textarea>
+            <div style="display:flex; gap:6px; margin-top:6px">
+              <button id="btnApply" class="ghost">코드 적용</button>
+              <span class="badge" id="netBadge">오프라인</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer style="display:flex; align-items:center; justify-content:space-between; color:var(--muted)">
+      <div>MVP: 1 Human + 1 Bot · 규칙: 드로우/땡큐 → 등록/붙이기(선택) → 버리기</div>
+      <button id="btnReset" class="ghost">새 게임</button>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" style="display:none"></div>
+
+<script>
+// ====== Card / Deck utils ======
+const SUITS = ['♠','♥','♦','♣'];
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const isRed = s => s==='♥' || s==='♦';
+
+function buildDeck(){
+  const deck=[]; let id=0;
+  for(const s of SUITS){
+    for(const r of RANKS){ deck.push({ id: String(id++), suit: s, rank: r }); }
+  }
+  return shuffle(deck);
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function rankValue(r){
+  if(r==='A') return 1; if(r==='J') return 11; if(r==='Q') return 12; if(r==='K') return 13; return parseInt(r,10);
+}
+
+function sortByRank(cards){ return [...cards].sort((a,b)=>rankValue(a.rank)-rankValue(b.rank)); }
+
+// ====== Meld validation ======
+function isSet(cards){
+  if(cards.length<3) return false; const r = cards[0].rank; return cards.every(c=>c.rank===r);
+}
+function isRun(cards){
+  if(cards.length<3) return false; const suit=cards[0].suit; if(!cards.every(c=>c.suit===suit)) return false;
+  // Ace can be low or high but not wrap
+  const sorted = sortByRank(cards);
+  // Try ace low
+  let ok = true; for(let i=1;i<sorted.length;i++){ if(rankValue(sorted[i].rank)!==rankValue(sorted[i-1].rank)+1) { ok=false; break; } }
+  if(ok) return true;
+  // Try ace high (treat A as 14)
+  const mapHigh = x=> x.rank==='A'?14:rankValue(x.rank);
+  const s2 = [...cards].sort((a,b)=>mapHigh(a)-mapHigh(b));
+  ok=true; for(let i=1;i<s2.length;i++){ if(mapHigh(s2[i])!==mapHigh(s2[i-1])+1){ ok=false; break; } }
+  return ok;
+}
+function canAttach(card, meld){
+  if(meld.kind==='seven') return false; // 7 단독 등록에는 붙일 수 없음
+  const cs = [...meld.cards, card];
+  if(meld.kind==='set') return isSet(cs);
+  if(meld.kind==='run') return isRun(cs);
+  return false;
+}
+
+function classifyMeld(cards){
+  // Solo seven rule
+  if(cards.length===1 && cards[0].rank==='7') return { kind:'seven', cards:[...cards] };
+  if(isSet(cards)) return { kind:'set', cards: sortByRank(cards) };
+  if(isRun(cards)) return { kind:'run', cards: sortByRank(cards) };
+  return null;
+}
+
+// ====== State ======
+const state = {
+  deck: [],
+  discard: [],
+  melds: [],
+  players: [],
+  turnIndex: 0,
+  phase: 'choose-source', // choose-source | action | must-discard | gameover
+  finishOrder: [],
+  options: { continueAfterOut: true },
+  round: 1,
+};
+
+function newGame(){
+  state.deck = buildDeck();
+  state.discard = [];
+  state.melds = [];
+  state.players = [
+    { id:'P1', name:'You', isBot:false, hand:[], status:'active' },
+    { id:'P2', name:'Bot', isBot:true, hand:[], status:'active' },
+  ];
+  state.turnIndex = 0; state.phase='choose-source'; state.finishOrder=[]; state.round=1;
+  for(let i=0;i<7;i++) state.players.forEach(p=>p.hand.push(state.deck.pop()));
+  state.discard.push(state.deck.pop());
+  drawUI(); logMsg('게임 시작!');
+  maybeBotTurn();
+}
+
+function current(){ return state.players[state.turnIndex]; }
+function nextActiveIndex(from){
+  const n=state.players.length;
+  for(let k=1;k<=n;k++){
+    const idx=(from+k)%n; if(state.players[idx].status==='active') return idx;
+  }
+  return from;
+}
+
+// ====== Rules helpers ======
+function legalThankYou(player){
+  const top = state.discard[state.discard.length-1]; if(!top) return {allowed:false};
+  if(state.phase!=='choose-source') return {allowed:false};
+  // attach 가능?
+  for(let i=0;i<state.melds.length;i++){ if(canAttach(top, state.melds[i])) return {allowed:true, card:top}; }
+  // register 가능?
+  const trial = [...player.hand, top];
+  const combos = kComb(trial, 1, 5); // 7 단독 등록도 체크하므로 min 1
+  for(const c of combos){ const m=classifyMeld(c); if(m) return {allowed:true, card:top}; }
+  return {allowed:false};
+}
+
+function kComb(arr, minK=3, maxK=5){
+  const res=[]; const n=arr.length; const max=Math.min(maxK,n);
+  function rec(start, combo){
+    if(combo.length>=minK){ res.push([...combo]); }
+    if(combo.length===max) return;
+    for(let i=start;i<n;i++){ combo.push(arr[i]); rec(i+1, combo); combo.pop(); }
+  }
+  rec(0,[]); return res;
+}
+
+function afterAnyAction(player){
+  if(player.status==='active' && player.hand.length===0){
+    player.status='out'; state.finishOrder.push(player.id);
+    toast(`${player.name} 아웃!`);
+    if(!state.options.continueAfterOut){ state.phase='gameover'; drawUI(); return true; }
+    const left = state.players.filter(p=>p.status==='active').length;
+    if(left<=1){
+      const last = state.players.find(p=>p.status==='active');
+      if(last){ last.status='out'; state.finishOrder.push(last.id); }
+      state.phase='gameover'; drawUI(); return true;
+    }
+    const idxNow = state.turnIndex;
+    if(state.players[idxNow].id===player.id){ state.turnIndex = nextActiveIndex(idxNow); state.phase='choose-source'; }
+  }
+  return false;
+}
+
+function endTurn(){
+  state.turnIndex = nextActiveIndex(state.turnIndex);
+  state.phase='choose-source';
+}
+
+// ====== Actions ======
+function drawFromDeck(){
+  const p=current(); if(state.phase!=='choose-source') return;
+  if(state.deck.length===0){ reshuffleFromDiscard(); }
+  if(state.deck.length===0) { logMsg('덱 고갈!'); return; }
+  p.hand.push(state.deck.pop());
+  state.phase='action';
+  drawUI();
+}
+
+function takeThankYou(){
+  const p=current(); const chk=legalThankYou(p); if(!chk.allowed) return;
+  const top=state.discard.pop(); p.hand.push(top);
+  state.phase='action';
+  toast('땡큐! 즉시 사용 조건 충족 ✅');
+  drawUI();
+}
+
+function registerSelected(kind){
+  const p=current(); if(state.phase==='choose-source'){ toast('먼저 드로우 또는 땡큐'); return; }
+  const sel = selectedFromHand();
+  if(sel.length<1){ toast('카드를 선택하세요'); return; }
+  const m = classifyMeld(sel);
+  if(!m){ toast('유효하지 않은 조합'); return; }
+  if(kind==='set' && m.kind!=='set') { toast('세트 아님'); return; }
+  if(kind==='run' && m.kind!=='run') { toast('런 아님'); return; }
+  // 7 단독 허용
+  if(m.kind==='seven' || kind===undefined || kind===m.kind){
+    p.hand = p.hand.filter(c=>!sel.includes(c));
+    state.melds.push(m);
+    logMsg(`${p.name} 등록: ${m.kind.toUpperCase()} (${pretty(m.cards)})`);
+    clearSelection(); drawUI(); if(afterAnyAction(p)) return; return;
+  }
+  toast('요청한 종류와 일치하지 않음');
+}
+
+function attachSelected(){
+  const p=current(); if(state.phase==='choose-source'){ toast('먼저 드로우 또는 땡큐'); return; }
+  const sel = selectedFromHand(); if(sel.length!==1){ toast('붙이기는 1장만 선택'); return; }
+  const card=sel[0];
+  for(let i=0;i<state.melds.length;i++){
+    const m=state.melds[i]; if(canAttach(card,m)){
+      p.hand = p.hand.filter(c=>c!==card); m.cards.push(card); m.cards = sortByRank(m.cards);
+      logMsg(`${p.name} 붙이기: ${card.rank}${card.suit} → #${i+1}`);
+      drawUI(); afterAnyAction(p); return;
+    }
+  }
+  toast('붙일 수 있는 곳이 없어요');
+}
+
+let pendingDiscard=null;
+function setDiscard(){
+  const p=current(); if(state.phase==='choose-source'){ toast('먼저 드로우 또는 땡큐'); return; }
+  const sel = selectedFromHand(); if(sel.length!==1){ toast('버리기는 1장 선택'); return; }
+  pendingDiscard = sel[0];
+  document.getElementById('btnDiscard').disabled=false;
+  drawUI();
+}
+function commitDiscard(){
+  const p=current(); if(!pendingDiscard) return;
+  p.hand = p.hand.filter(c=>c!==pendingDiscard);
+  state.discard.push(pendingDiscard); logMsg(`${p.name} 버림: ${cardText(pendingDiscard)}`);
+  pendingDiscard=null; document.getElementById('btnDiscard').disabled=true;
+  drawUI();
+  if(afterAnyAction(p)) return;
+  endTurn(); drawUI(); maybeBotTurn();
+}
+
+function reshuffleFromDiscard(){
+  if(state.discard.length<2) return; // keep top
+  const top = state.discard.pop();
+  state.deck = shuffle(state.discard); state.discard=[top];
+}
+
+// ====== Bot (human-like delay) ======
+function maybeBotTurn(){
+  const p=current(); if(!p.isBot || state.phase==='gameover') return;
+  const delay = (ms)=>new Promise(res=>setTimeout(res, ms));
+  (async()=>{
+    await delay(300 + Math.random()*500);
+    await botActAsync(delay);
+  })();
+}
+
+async function botActAsync(delay){
+  const p=current(); if(!p.isBot || p.status!=='active') return;
+  if(state.phase==='choose-source'){
+    await delay(200+Math.random()*400);
+    const canTY = legalThankYou(p).allowed;
+    if(canTY){ takeThankYou(); drawUI(); return botActAsync(delay); }
+    drawFromDeck(); drawUI(); return botActAsync(delay);
+  }
+  const tryRegister = async () => {
+    const combos = kComb(p.hand,1,5).sort((a,b)=>b.length-a.length); // 7 단독도 탐색
+    for(const cs of combos){ const m=classifyMeld(cs); if(m){
+      await delay(220+Math.random()*380);
+      p.hand = p.hand.filter(c=>!cs.includes(c)); state.melds.push(m);
+      logMsg(`Bot 등록: ${m.kind.toUpperCase()} (${pretty(m.cards)})`);
+      drawUI(); if(afterAnyAction(p)) return true; return tryRegister();
+    }} return false;
+  };
+  if(await tryRegister()) return;
+  for(let i=0;i<p.hand.length;i++){
+    const c=p.hand[i];
+    for(let j=0;j<state.melds.length;j++){
+      if(canAttach(c,state.melds[j])){
+        await delay(180+Math.random()*300);
+        p.hand.splice(i,1); state.melds[j].cards.push(c); state.melds[j].cards=sortByRank(state.melds[j].cards);
+        logMsg(`Bot 붙이기: ${cardText(c)} → #${j+1}`);
+        drawUI(); if(afterAnyAction(p)) return; i=-1; break;
+      }
+    }
+  }
+  await delay(220+Math.random()*380);
+  let candIndex=0, bestScore=-1;
+  for(let i=0;i<p.hand.length;i++){
+    const c=p.hand[i];
+    const rv=rankValue(c.rank); const suitScore = p.hand.filter(x=>x.suit===c.suit).length;
+    const rankScore = p.hand.filter(x=>x.rank===c.rank).length;
+    const score = rv + (1/(suitScore||1))*4 + (1/(rankScore||1))*6;
+    if(score>bestScore){bestScore=score; candIndex=i;}
+  }
+  const dc = p.hand.splice(candIndex,1)[0]; state.discard.push(dc); logMsg(`Bot 버림: ${cardText(dc)}`);
+  drawUI(); if(afterAnyAction(p)) return; endTurn(); drawUI();
+}
+
+// ====== UI ======
+function drawUI(){
+  document.getElementById('opt-continue').checked = state.options.continueAfterOut;
+  document.getElementById('turnBadge').textContent = `턴: ${current().name}`;
+  document.getElementById('roundInfo').textContent = `R${state.round}${state.phase==='gameover'?' · 게임끝':''}`;
+
+  const deckCount = document.getElementById('deckCount'); deckCount.textContent = `남은 장수: ${state.deck.length}`;
+
+  const dc = document.getElementById('discardCards'); dc.innerHTML='';
+  const top = state.discard[state.discard.length-1]; if(top) { const el=cardEl(top,false); el.classList.add('enter'); dc.appendChild(el); }
+
+  const mwrap = document.getElementById('melds'); mwrap.innerHTML='';
+  state.melds.forEach((m,i)=>{
+    const d=document.createElement('div'); d.className='meld enter';
+    const title=document.createElement('div'); title.style.fontSize='12px'; title.style.color='var(--muted)';
+    title.textContent = `#${i+1} · ${m.kind.toUpperCase()} (${m.cards.length})`;
+    const row=document.createElement('div'); row.className='cards';
+    m.cards.forEach(c=>{ const el=cardEl(c,false); el.classList.add('enter'); row.appendChild(el); });
+    d.appendChild(title); d.appendChild(row); mwrap.appendChild(d);
+  });
+
+  const h = document.getElementById('hand'); h.innerHTML='';
+  const me = state.players[0];
+  me.hand.sort((a,b)=> (a.suit===b.suit? rankValue(a.rank)-rankValue(b.rank) : a.suit.localeCompare(b.suit)));
+  me.hand.forEach(c=> { const el=cardEl(c,true); el.classList.add('enter'); h.appendChild(el); });
+
+  const plist=document.getElementById('players'); plist.innerHTML='';
+  state.players.forEach((p)=>{
+    const line=document.createElement('div'); line.style.display='flex'; line.style.justifyContent='space-between'; line.style.margin='6px 0';
+    const left=document.createElement('div'); left.textContent = `${p.name} ${p.isBot?'🤖':'🙂'}`;
+    const right=document.createElement('div'); right.innerHTML = `<span class="rankpill">${p.status==='active'?`hand ${p.hand.length}`:'OUT'}</span>`;
+    line.appendChild(left); line.appendChild(right); plist.appendChild(line);
+  });
+
+  const f=document.getElementById('finish'); f.innerHTML='';
+  state.finishOrder.forEach((pid,idx)=>{
+    const li=document.createElement('li'); const nm = state.players.find(p=>p.id===pid)?.name||pid; li.textContent = `${idx+1}등 · ${nm}`; f.appendChild(li);
+  });
+
+  const meTurn = current().id==='P1' && state.players[0].status==='active' && state.phase!=='gameover';
+  document.getElementById('btnDraw').disabled = !meTurn || state.phase!=='choose-source';
+  const canTY = meTurn && legalThankYou(state.players[0]).allowed; const tyBtn=document.getElementById('btnTY');
+  tyBtn.disabled = !canTY; tyBtn.classList.toggle('pulse', canTY);
+}
+
+function cardEl(card, selectable){
+  const d=document.createElement('div'); d.className='card'; d.dataset.id=card.id; if(selectable) d.addEventListener('click',()=>toggleSelect(card.id,d));
+  const inner=document.createElement('div'); inner.className='inner';
+  const rank=document.createElement('div'); rank.className='rank ' + (isRed(card.suit)?'red':'black'); rank.textContent=card.rank;
+  const suit=document.createElement('div'); suit.className='suit ' + (isRed(card.suit)?'red':'black'); suit.textContent=card.suit;
+  inner.appendChild(rank); inner.appendChild(suit); d.appendChild(inner); return d;
+}
+
+const selected = new Set();
+function toggleSelect(id, el){ if(selected.has(id)){ selected.delete(id); el.classList.remove('selected'); }
+  else { selected.add(id); el.classList.add('selected'); }
+}
+function selectedFromHand(){
+  const me=state.players[0]; const ids=[...selected]; const out=[];
+  ids.forEach(id=>{ const c=me.hand.find(x=>x.id===id); if(c) out.push(c); });
+  return out;
+}
+function clearSelection(){ selected.clear(); }
+
+// ====== Networking (P2P WebRTC, copy-paste SDP) ======
+const net = { role:null, pc:null, dc:null, online:false, isHost:false };
+const netBadge = ()=>document.getElementById('netBadge');
+
+async function hostStart(){
+  net.role='host'; net.isHost=true; net.pc=new RTCPeerConnection();
+  net.dc = net.pc.createDataChannel('hoola');
+  wireDataChannel(net.dc);
+  const offer = await net.pc.createOffer(); await net.pc.setLocalDescription(offer);
+  document.getElementById('sdpOut').value = btoa(JSON.stringify(net.pc.localDescription));
+  net.pc.onicecandidate = (e)=>{ if(!e.candidate){ document.getElementById('sdpOut').value = btoa(JSON.stringify(net.pc.localDescription)); }}
+}
+async function guestStart(){
+  net.role='guest'; net.isHost=false; net.pc=new RTCPeerConnection();
+  net.pc.ondatachannel = (e)=>{ net.dc=e.channel; wireDataChannel(net.dc); };
+  const offerStr = document.getElementById('sdpIn').value.trim(); if(!offerStr) return toast('호스트 코드를 붙여넣으세요');
+  const offer = JSON.parse(atob(offerStr));
+  await net.pc.setRemoteDescription(offer);
+  const answer = await net.pc.createAnswer(); await net.pc.setLocalDescription(answer);
+  document.getElementById('sdpOut').value = btoa(JSON.stringify(net.pc.localDescription));
+  net.pc.onicecandidate = (e)=>{ if(!e.candidate){ document.getElementById('sdpOut').value = btoa(JSON.stringify(net.pc.localDescription)); }}
+}
+async function hostApplyAnswer(){
+  const ansStr = document.getElementById('sdpIn').value.trim(); if(!ansStr) return toast('게스트 코드를 붙여넣으세요');
+  const ans = JSON.parse(atob(ansStr)); await net.pc.setRemoteDescription(ans);
+}
+function wireDataChannel(dc){
+  dc.onopen=()=>{ net.online=true; netBadge().textContent='온라인'; netBadge().style.background='#eaffea'; netBadge().style.color='#137a13';
+    // 전환: 2인 온라인 모드 (봇 비활성화)
+    state.players = [
+      { id:'P1', name: net.isHost? 'You(Host)':'You', isBot:false, hand:[], status:'active' },
+      { id:'P2', name: net.isHost? 'Guest':'Host', isBot:false, hand:[], status:'active' },
+    ];
+    if(net.isHost){ newGame(); sendSnapshot(); }
+  };
+  dc.onmessage=(e)=>{
+    const msg = JSON.parse(e.data);
+    if(msg.t==='snapshot'){ Object.assign(state, msg.state); drawUI(); return; }
+    if(!net.isHost){ return; } // 게스트는 명령 안 처리
+    handleRemoteAction(msg);
+  };
+}
+function sendSnapshot(){ if(net.online && net.dc?.readyState==='open'){ net.dc.send(JSON.stringify({t:'snapshot', state})); }}
+function sendAction(a){ if(net.online && net.dc?.readyState==='open'){ net.dc.send(JSON.stringify(a)); }}
+
+function handleRemoteAction(a){
+  if(current().id!=='P2' || state.phase==='gameover') return;
+  switch(a.t){
+    case 'draw': drawFromDeck(); break;
+    case 'thankyou': takeThankYou(); break;
+    case 'register': {
+      const p = state.players[1];
+      const cards = p.hand.filter(c=>a.ids.includes(c.id));
+      const m = classifyMeld(cards);
+      if(!m) return; if(a.kind && m.kind!==a.kind) return;
+      p.hand = p.hand.filter(c=>!cards.includes(c)); state.melds.push(m); logMsg(`Remote 등록: ${m.kind}`); afterAnyAction(p);
+    } break;
+    case 'attach': {
+      const p=state.players[1]; const card=p.hand.find(c=>c.id===a.id); const m=state.melds[a.meldIndex]; if(card && m && canAttach(card,m)){
+        p.hand=p.hand.filter(x=>x!==card); m.cards.push(card); m.cards=sortByRank(m.cards); logMsg('Remote 붙이기'); afterAnyAction(p);
+      }
+    } break;
+    case 'discard': {
+      const p=state.players[1]; const card=p.hand.find(c=>c.id===a.id); if(!card) break; p.hand=p.hand.filter(x=>x!==card); state.discard.push(card); endTurn();
+    } break;
+  }
+  drawUI(); sendSnapshot();
+}
+
+// ====== Events ======
+const elDraw=document.getElementById('btnDraw');
+const elTY=document.getElementById('btnTY');
+const elRegSet=document.getElementById('btnRegSet');
+const elRegRun=document.getElementById('btnRegRun');
+const elAttach=document.getElementById('btnAttach');
+const elPendDiscard=document.getElementById('btnDiscard');
+const elReset=document.getElementById('btnReset');
+
+elDraw.onclick=()=>{ if(net.online && !net.isHost && current().id==='P2') sendAction({t:'draw'}); else { drawFromDeck(); sendSnapshot(); } };
+elTY.onclick=()=>{ if(net.online && !net.isHost && current().id==='P2') sendAction({t:'thankyou'}); else { takeThankYou(); sendSnapshot(); } };
+elRegSet.onclick=()=>{
+  const ids = selectedFromHand().map(c=>c.id);
+  if(net.online && !net.isHost && current().id==='P2') sendAction({t:'register', kind:'set', ids});
+  else { registerSelected('set'); sendSnapshot(); }
+};
+elRegRun.onclick=()=>{
+  const ids = selectedFromHand().map(c=>c.id);
+  if(net.online && !net.isHost && current().id==='P2') sendAction({t:'register', kind:'run', ids});
+  else { registerSelected('run'); sendSnapshot(); }
+};
+elAttach.onclick=()=>{
+  const sel = selectedFromHand(); if(sel.length!==1){ attachSelected(); sendSnapshot(); return; }
+  const id = sel[0].id; const meldIndex = 0; // 간단: 로컬은 자동 탐색, 온라인은 명령 전송
+  if(net.online && !net.isHost && current().id==='P2') sendAction({t:'attach', id, meldIndex});
+  else { attachSelected(); sendSnapshot(); }
+};
+
+document.getElementById('hand').addEventListener('dblclick', ()=>{ setDiscard(); });
+elPendDiscard.onclick=()=>{
+  if(net.online && !net.isHost && current().id==='P2'){
+    const sel = selectedFromHand(); if(sel.length===1) sendAction({t:'discard', id: sel[0].id});
+  } else { commitDiscard(); sendSnapshot(); }
+};
+
+document.getElementById('opt-continue').addEventListener('change', (e)=>{ state.options.continueAfterOut = e.target.checked; sendSnapshot(); });
+
+elReset.onclick=()=>{ newGame(); sendSnapshot(); };
+
+document.getElementById('btnHost').onclick=()=>hostStart();
+document.getElementById('btnJoin').onclick=()=>guestStart();
+document.getElementById('btnApply').onclick=()=>hostApplyAnswer();
+
+// boot
+newGame();
+</script>
+</body>
+</html>
