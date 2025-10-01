@@ -136,6 +136,14 @@ function newGame(){
 }
 
 function current(){ return state.players[state.turnIndex]; }
+function localPlayerId(){
+  if(!net.online) return 'P1';
+  return net.isHost ? 'P1' : 'P2';
+}
+function localPlayer(){
+  const id = localPlayerId();
+  return state.players.find((p)=>p.id===id) ?? state.players[0] ?? null;
+}
 function nextActiveIndex(from){ const n=state.players.length; for(let k=1;k<=n;k++){ const idx=(from+k)%n; if(state.players[idx].status==='active') return idx; } return from; }
 
 // ====== Rules helpers ======
@@ -442,7 +450,7 @@ function drawUI(){
   const handEl = document.getElementById('hand');
   if(handEl){
     handEl.innerHTML='';
-    const me = state.players[0];
+    const me = localPlayer();
     if(me){
       me.hand.sort((a,b)=> (a.suit===b.suit? rankValue(a.rank)-rankValue(b.rank) : a.suit.localeCompare(b.suit)));
       me.hand.forEach(c=>{ const el=cardEl(c,true); el.classList.add('enter'); handEl.appendChild(el); });
@@ -476,12 +484,13 @@ function drawUI(){
     });
   }
 
-  const me = state.players[0];
-  const meTurn = me && activeTurn && activeTurn.id==='P1' && me.status==='active' && state.phase!=='gameover';
+  const me = localPlayer();
+  const meTurn = me && activeTurn && activeTurn.id===me.id && me.status==='active' && state.phase!=='gameover';
   document.getElementById('btnDraw').disabled = !meTurn || state.phase!=='choose-source';
   const tyBtn=document.getElementById('btnTY');
   const tyCheck = me ? legalThankYouFor(me) : {allowed:false};
-  tyBtn.disabled = !(state.ty.open && (!state.ty.claimant || state.ty.claimant==='P1') && tyCheck.allowed);
+  const localId = me?.id ?? localPlayerId();
+  tyBtn.disabled = !(state.ty.open && (!state.ty.claimant || state.ty.claimant===localId) && tyCheck.allowed);
   tyBtn.classList.toggle('pulse', !tyBtn.disabled);
 }
 function cardEl(card, selectable){
@@ -494,7 +503,7 @@ function cardEl(card, selectable){
 
 const selected = new Set();
 function toggleSelect(id, el){ if(selected.has(id)){ selected.delete(id); el.classList.remove('selected'); } else { selected.add(id); el.classList.add('selected'); } updateDiscardButtonState(); }
-function selectedFromHand(){ const me=state.players[0]; const ids=[...selected]; const out=[]; ids.forEach(id=>{ const c=me.hand.find(x=>x.id===id); if(c) out.push(c); }); return out; }
+function selectedFromHand(){ const me=localPlayer(); if(!me) return []; const ids=[...selected]; const out=[]; ids.forEach(id=>{ const c=me.hand.find(x=>x.id===id); if(c) out.push(c); }); return out; }
 function clearSelection(){ selected.clear(); updateDiscardButtonState(); }
 
 // ====== UX helpers ======
@@ -521,7 +530,15 @@ function showToast(message, ms=1200){
 function logMsg(msg){ const l=document.getElementById('log'); if(!l){ console.log('[LOG]', msg); return; } const line=document.createElement('div'); line.textContent=msg; l.appendChild(line); l.scrollTop=l.scrollHeight; }
 function cardText(c){ return `${c.rank}${c.suit}`; }
 function pretty(cards){ return cards.map(cardText).join(' '); }
-function updateDiscardButtonState(){ const btn = document.getElementById('btnDiscard'); const meTurn = current().id==='P1' && state.players[0].status==='active' && state.phase!=='gameover'; const one = selectedFromHand().length===1; btn.disabled = !(meTurn && state.phase!=='choose-source' && one && !state.mustUseThankYouCardId); }
+function updateDiscardButtonState(){
+  const btn = document.getElementById('btnDiscard');
+  if(!btn) return;
+  const me = localPlayer();
+  const active = current();
+  const meTurn = !!(me && active && active.id===me.id && me.status==='active' && state.phase!=='gameover');
+  const one = selectedFromHand().length===1;
+  btn.disabled = !(meTurn && state.phase!=='choose-source' && one && !state.mustUseThankYouCardId);
+}
 
 // ====== Unit Tests (lightweight) ======
 function runUnitTests(){
@@ -548,10 +565,12 @@ function runUnitTests(){
     state.melds=[]; state.phase='choose-source';
     state.ty={open:true, claimant:null, fromPlayerId:'P2', cardId:'X'};
     // Give P1 a helping card to register 7 solo
-    const preLen = state.players[0].hand.length;
+    const meBefore = localPlayer();
+    const preLen = meBefore ? meBefore.hand.length : 0;
     const c1 = claimThankYou(0);
     const c2 = claimThankYou(1);
-    rec('thankyou first-come wins', c1===true && c2===false && state.players[0].hand.length===preLen+1);
+    const meAfter = localPlayer();
+    rec('thankyou first-come wins', c1===true && c2===false && meAfter && meAfter.hand.length===preLen+1);
     Object.assign(state,tmp);
   }catch(e){ rec('thankyou race rule', false, e.message); }
   const ok = results.filter(r=>r.ok).length; const total = results.length; logMsg(`테스트: ${ok}/${total} 성공`); results.filter(r=>!r.ok).forEach(r=>logMsg(`❌ ${r.name} ${r.detail?'- '+r.detail:''}`));
@@ -566,6 +585,8 @@ export {
   clampSeatCount,
   newGame,
   current,
+  localPlayerId,
+  localPlayer,
   nextActiveIndex,
   legalThankYouFor,
   kComb,
