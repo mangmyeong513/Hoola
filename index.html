@@ -3,115 +3,104 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hoola (훌라) — 귀염뽀짝 2.5D MVP</title>
+  <title>Hoola (훌라) — 3D 네온 아레나</title>
   <link rel="stylesheet" href="styles/main.css" />
 </head>
-<body class="is-desktop">
+<body>
   <div class="app">
-    <header>
-      <h1>Hoola · 귀염뽀짝 2.5D MVP</h1>
-      <div class="opts">
-        <label><input type="checkbox" id="opt-continue" /> <span>아웃 후 계속(순위 확정)</span></label>
-        <label>
+    <header class="topbar">
+      <div>
+        <h1>Hoola · 3D Arena</h1>
+        <p class="tagline">최소 3명 · 최대 6명 · 부족 시 봇 자동 충원</p>
+      </div>
+      <div class="controls">
+        <label class="control">
           <span>플레이어 수</span>
-          <select id="opt-seats">
+          <select id="seatSelect" aria-label="플레이어 수 선택">
             <option value="3">3</option>
-            <option value="4">4</option>
+            <option value="4" selected>4</option>
             <option value="5">5</option>
             <option value="6">6</option>
           </select>
         </label>
-        <span class="badge" id="turnBadge">턴: -</span>
+        <button id="reshuffle" type="button">새 게임</button>
       </div>
     </header>
 
-    <div class="board">
-      <section class="board-main">
-        <div class="arena" id="arena">
-          <div class="arena-stage">
-            <div class="arena-surface">
-              <div class="zones">
-                <div class="zone" id="deckZone">
-                  <h3>DECK</h3>
-                  <div class="cards" id="deckCount"></div>
-                  <div class="hud"><button id="btnDraw">드로우</button><button id="btnTY" class="ghost">땡큐</button></div>
-                </div>
-                <div class="zone" id="discardZone">
-                  <h3>DISCARD</h3>
-                  <div class="cards" id="discardCards"></div>
-                </div>
-                <div class="zone" id="infoZone">
-                  <h3>INFO</h3>
-                  <div class="log" id="log"></div>
-                </div>
+    <main class="layout">
+      <section class="arena" aria-label="훌라 테이블">
+        <div class="arena-persp">
+          <div class="arena-surface">
+            <div class="table-glow"></div>
+            <div class="deck" aria-label="덱">
+              <div class="card card-back"></div>
+              <div class="card card-back"></div>
+              <div class="card card-back"></div>
+              <span class="label">DECK</span>
+            </div>
+            <div class="discard" aria-label="버린 카드">
+              <div class="card">
+                <span class="rank">Q</span>
+                <span class="suit red">♥</span>
+              </div>
+              <span class="label">DISCARD</span>
+            </div>
+            <div class="arena-center">
+              <div class="hud">
+                <button type="button">드로우</button>
+                <button type="button" class="ghost">땡큐</button>
+                <button type="button" class="accent">등록</button>
               </div>
             </div>
           </div>
-          <div class="seat-layer" id="arenaSeats"></div>
+        </div>
+        <ul class="seat-ring" id="seatRing" aria-label="좌석 목록"></ul>
+      </section>
+
+      <section class="panel" aria-label="현재 손패">
+        <header>
+          <h2>내 손패</h2>
+          <span class="hint">버려서 턴 종료</span>
+        </header>
+        <div class="hand">
+          <div class="card">
+            <span class="rank">7</span>
+            <span class="suit">♣</span>
+          </div>
+          <div class="card">
+            <span class="rank">7</span>
+            <span class="suit">♠</span>
+          </div>
+          <div class="card">
+            <span class="rank">8</span>
+            <span class="suit red">♦</span>
+          </div>
+          <div class="card">
+            <span class="rank">9</span>
+            <span class="suit">♣</span>
+          </div>
+          <div class="card">
+            <span class="rank">10</span>
+            <span class="suit red">♥</span>
+          </div>
         </div>
       </section>
 
-      <section class="panel panel-melds">
-        <h3 class="panel-title">TABLE MELDS</h3>
-        <div id="melds" class="meld-grid"></div>
+      <section class="panel" aria-label="게임 로그">
+        <header>
+          <h2>라운드 정보</h2>
+          <span class="hint">턴 순서 &amp; 로그</span>
+        </header>
+        <ol id="logList" class="log" aria-live="polite"></ol>
       </section>
+    </main>
 
-      <section class="panel hand panel-hand">
-        <div class="hand-header">
-          <h3>YOUR HAND</h3>
-          <div class="hud">
-            <button id="btnRegSet" class="ghost">세트 등록</button>
-            <button id="btnRegRun" class="ghost">런 등록</button>
-            <button id="btnAttach" class="ghost">붙이기</button>
-            <button id="btnDiscard" class="danger" disabled>버리고 종료</button>
-          </div>
-        </div>
-        <div class="cards" id="hand"></div>
-      </section>
-
-      <aside class="right">
-        <div class="panel panel-players">
-          <div class="panel-head">
-            <strong>Players</strong>
-            <span class="pill" id="roundInfo">R1</span>
-          </div>
-          <div id="players"></div>
-        </div>
-        <div class="panel panel-finish">
-          <div class="panel-head">
-            <strong>Finish Order</strong>
-          </div>
-          <ol id="finish"></ol>
-        </div>
-        <div class="panel panel-online">
-          <div class="panel-head">
-            <strong>온라인 플레이(베타)</strong>
-          </div>
-          <div class="button-row">
-            <button id="btnHost" class="ghost">호스트</button>
-            <button id="btnJoin" class="ghost">게스트</button>
-          </div>
-          <small>SDP 코드를 복사/붙여넣기로 연결합니다(서버 없이 P2P).</small>
-          <div class="net-io">
-            <textarea id="sdpIn" placeholder="상대 코드 붙여넣기"></textarea>
-            <textarea id="sdpOut" placeholder="내 코드" readonly></textarea>
-            <div class="button-row">
-              <button id="btnApply" class="ghost">코드 적용</button>
-              <span class="badge" id="netBadge">오프라인</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </div>
-
-    <footer>
-      <div>최소 3명 · 최대 6명 · 부족 시 봇 자동 충원 · 규칙: 드로우/땡큐 → 등록/붙이기 → 버리기</div>
-      <button id="btnReset" class="ghost">새 게임</button>
+    <footer class="foot">
+      <small>모바일에서는 평면 모드로 전환되어 조작이 쉬워집니다.</small>
+      <div class="badge" id="modeBadge" aria-live="polite">Desktop 3D</div>
     </footer>
   </div>
 
-  <div class="toast" id="toast" style="display:none"></div>
-
-  <script type="module" src="scripts/main.js"></script>
+  <script src="scripts/app.js"></script>
 </body>
 </html>
