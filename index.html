@@ -6,7 +6,7 @@
   <title>Hoola (훌라) — 네온 3D 아레나</title>
   <link rel="stylesheet" href="styles/main.css" />
 </head>
-<body>
+<body class="is-desktop">
   <div class="app">
     <header>
       <h1>Hoola · 네온 3D Arena</h1>
@@ -26,7 +26,7 @@
     </header>
 
     <div class="board">
-      <div class="table" id="table">
+      <section class="board-main">
         <div class="arena" id="arena">
           <div class="arena-stage">
             <div class="arena-surface">
@@ -49,42 +49,41 @@
           </div>
           <div class="seat-layer" id="arenaSeats"></div>
         </div>
+      </section>
 
-        <div class="table-panels">
-          <div class="panel">
-            <h3 class="panel-title">TABLE MELDS</h3>
-            <div id="melds" class="meld-grid"></div>
-          </div>
-          <div class="panel hand">
-            <div class="hand-header">
-              <h3>YOUR HAND</h3>
-              <div class="hud">
-                <button id="btnRegSet" class="ghost">세트 등록</button>
-                <button id="btnRegRun" class="ghost">런 등록</button>
-                <button id="btnAttach" class="ghost">붙이기</button>
-                <button id="btnDiscard" class="danger" disabled>버리고 종료</button>
-              </div>
-            </div>
-            <div class="cards" id="hand"></div>
+      <section class="panel panel-melds">
+        <h3 class="panel-title">TABLE MELDS</h3>
+        <div id="melds" class="meld-grid"></div>
+      </section>
+
+      <section class="panel hand panel-hand">
+        <div class="hand-header">
+          <h3>YOUR HAND</h3>
+          <div class="hud">
+            <button id="btnRegSet" class="ghost">세트 등록</button>
+            <button id="btnRegRun" class="ghost">런 등록</button>
+            <button id="btnAttach" class="ghost">붙이기</button>
+            <button id="btnDiscard" class="danger" disabled>버리고 종료</button>
           </div>
         </div>
-      </div>
+        <div class="cards" id="hand"></div>
+      </section>
 
       <aside class="right">
-        <div class="panel">
+        <div class="panel panel-players">
           <div class="panel-head">
             <strong>Players</strong>
             <span class="pill" id="roundInfo">R1</span>
           </div>
           <div id="players"></div>
         </div>
-        <div class="panel">
+        <div class="panel panel-finish">
           <div class="panel-head">
             <strong>Finish Order</strong>
           </div>
           <ol id="finish"></ol>
         </div>
-        <div class="panel">
+        <div class="panel panel-online">
           <div class="panel-head">
             <strong>온라인 플레이(베타)</strong>
           </div>

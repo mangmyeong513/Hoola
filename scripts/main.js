@@ -119,6 +119,19 @@ document.getElementById('btnHost').onclick = () => hostStart();
 document.getElementById('btnJoin').onclick = () => guestStart();
 document.getElementById('btnApply').onclick = () => hostApplyAnswer();
 
+const mobileQuery = window.matchMedia('(max-width: 820px)');
+function applyViewMode() {
+  const isMobile = mobileQuery.matches;
+  document.body.classList.toggle('is-mobile', isMobile);
+  document.body.classList.toggle('is-desktop', !isMobile);
+}
+if (typeof mobileQuery.addEventListener === 'function') {
+  mobileQuery.addEventListener('change', applyViewMode);
+} else if (typeof mobileQuery.addListener === 'function') {
+  mobileQuery.addListener(applyViewMode);
+}
+applyViewMode();
+
 runUnitTests();
 newGame();
 updateDiscardButtonState();

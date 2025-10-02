@@ -33,8 +33,7 @@ header .opts label{display:flex; align-items:center; gap:6px; background:rgba(14
 header .opts select{background:rgba(9,14,30,.8); border:1px solid rgba(115,140,255,.4); border-radius:10px; padding:6px 26px 6px 10px; color:var(--ink); font-weight:600}
 header .opts select:disabled{opacity:.5}
 header .opts .badge{background:rgba(15,20,44,.9); color:var(--ink-soft)}
-.board{display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:20px; height:100%}
-.table{position:relative; display:flex; flex-direction:column; gap:22px; overflow:visible}
+.board{display:grid; gap:20px; height:100%; grid-auto-rows:minmax(0,max-content)}
 .arena{position:relative; border-radius:36px; padding:34px; background:radial-gradient(circle at 50% 30%, rgba(107,146,255,.35) 0%, rgba(35,47,105,.6) 45%, rgba(8,10,25,.9) 100%); box-shadow:0 40px 80px rgba(5,9,35,.55), inset 0 0 0 1px rgba(129,149,255,.2);}
 .arena-stage{position:relative; width:100%; aspect-ratio:4/3; margin:0 auto; perspective:1600px; transform-style:preserve-3d}
 .arena-surface{position:absolute; inset:0; border-radius:46px; background:linear-gradient(135deg, rgba(25,32,72,.95) 0%, rgba(9,13,34,.92) 50%, rgba(19,28,66,.95) 100%); transform:rotateX(58deg); transform-style:preserve-3d; box-shadow:inset 0 24px 60px rgba(18,27,76,.65), inset 0 -32px 40px rgba(5,7,18,.95), 0 60px 140px rgba(4,6,18,.75)}
@@ -52,12 +51,13 @@ header .opts .badge{background:rgba(15,20,44,.9); color:var(--ink-soft)}
 .seat[data-bot="false"] .seat-name::after{content:"🙂"; margin-left:6px}
 .seat[data-turn="true"] .seat-name::after{content:"🔥"; margin-left:6px}
 .seat-layer::after{content:""; position:absolute; inset:8%; border-radius:50%; border:1px dashed rgba(128,150,255,.28); transform:translateZ(80px)}
+.board-main{display:flex; flex-direction:column; gap:22px}
+.panel-melds{display:flex; flex-direction:column; gap:12px}
+.panel-hand{position:sticky; bottom:0; background:linear-gradient(180deg, rgba(16,22,47,.95) 0%, rgba(10,14,32,.92) 100%)}
 .right{display:flex; flex-direction:column; gap:16px}
 .panel{background:rgba(12,17,40,.85); border-radius:22px; box-shadow:0 20px 36px rgba(4,7,20,.6); padding:16px; border:1px solid rgba(114,138,255,.18); color:var(--ink)}
 .panel strong{color:#fff; letter-spacing:.3px}
 .panel small{color:var(--ink-soft)}
-.table-panels{display:flex; flex-direction:column; gap:16px}
-.panel.hand{position:sticky; bottom:0; background:linear-gradient(180deg, rgba(16,22,47,.95) 0%, rgba(10,14,32,.92) 100%)}
 .hud{display:flex; flex-wrap:wrap; gap:10px}
 button{appearance:none; border:none; background:linear-gradient(180deg,#3d4fff,#2836ff); color:#fff; padding:10px 14px; border-radius:14px; font-weight:700; cursor:pointer; box-shadow:0 14px 28px rgba(39,51,158,.5); letter-spacing:.2px}
 button.ghost{background:rgba(16,24,58,.85); color:var(--ink); border:1px solid rgba(115,140,255,.4); box-shadow:none}
@@ -114,43 +114,45 @@ button.danger{background:linear-gradient(180deg,#ff7b8a,#ff4d6b); box-shadow:0 1
 footer{display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--ink-soft); background:rgba(10,14,32,.85); padding:14px 20px; border-radius:20px; border:1px solid rgba(120,140,255,.2); box-shadow:0 20px 34px rgba(3,5,18,.5); margin-top:8px}
 footer button{min-width:120px}
 
+body.is-desktop .board{grid-template-columns:minmax(0,1.45fr) 320px; grid-template-rows:minmax(0,1fr) auto auto; grid-template-areas:"arena sidebar" "hand sidebar" "melds sidebar"; align-items:start}
+body.is-desktop .board-main{grid-area:arena}
+body.is-desktop .panel-hand{grid-area:hand}
+body.is-desktop .panel-melds{grid-area:melds}
+body.is-desktop .right{grid-area:sidebar}
+
+body.is-mobile .app{padding:12px; gap:12px}
+body.is-mobile header{flex-direction:column; align-items:flex-start; gap:10px}
+body.is-mobile header h1{font-size:18px; width:100%; text-align:left}
+body.is-mobile header .opts{width:100%; flex-direction:column; align-items:stretch}
+body.is-mobile header .opts label{width:100%}
+body.is-mobile .board{grid-template-columns:1fr; grid-template-areas:"arena" "hand" "melds" "players" "finish" "online"; gap:14px}
+body.is-mobile .board-main{grid-area:arena}
+body.is-mobile .panel-hand{grid-area:hand; position:sticky; bottom:0; z-index:3; box-shadow:0 12px 32px rgba(6,8,26,.5)}
+body.is-mobile .panel-hand .hud{flex-wrap:wrap; justify-content:center}
+body.is-mobile .panel-hand .hud button{flex:1 1 calc(50% - 10px); min-width:0}
+body.is-mobile .panel-melds{grid-area:melds}
+body.is-mobile .right{display:contents}
+body.is-mobile .panel-players{grid-area:players}
+body.is-mobile .panel-finish{grid-area:finish}
+body.is-mobile .panel-online{grid-area:online}
+body.is-mobile .arena{padding:16px}
+body.is-mobile .arena-stage{aspect-ratio:1.05}
+body.is-mobile .arena-surface{transform:rotateX(44deg)}
+body.is-mobile .seat-layer{display:none}
+body.is-mobile .zones{gap:14px}
+body.is-mobile footer{flex-direction:column; align-items:stretch; text-align:center; gap:10px}
+body.is-mobile footer button{width:100%}
+
 @media (max-width: 1180px){
-  .seat-layer{--orbit:44%}
-  .seat{width:132px}
+  body.is-desktop .seat-layer{--orbit:44%}
+  body.is-desktop .seat{width:132px}
 }
 
-@media (max-width: 1024px){
-  .app{padding:16px; gap:14px}
-  header{flex-direction:column; align-items:flex-start}
-  header .opts{width:100%; justify-content:flex-start}
-  .board{grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto; gap:18px}
-  .right{order:-1}
-  .arena{padding:26px}
-  .arena-stage{aspect-ratio:5/4}
-  .arena-surface{transform:rotateX(54deg)}
-  .seat-layer{--orbit:42%}
-}
-
-@media (max-width: 780px){
-  header h1{text-align:center; width:100%; font-size:18px}
-  header .opts{flex-direction:column; align-items:stretch}
-  header .opts label{width:100%}
-  .board{gap:14px}
-  .arena{padding:18px}
-  .arena-stage{aspect-ratio:1.1}
-  .arena-surface{transform:rotateX(48deg)}
-  .seat{width:122px; padding:10px 12px}
-  .seat-layer{--orbit:40%}
-  .panel.hand .hud{flex-wrap:wrap; justify-content:center}
-  .panel.hand .hud button{flex:1 1 calc(50% - 8px); min-width:0}
-}
-
-@media (max-width: 540px){
-  .app{padding:12px}
-  .arena{padding:16px}
-  .seat-layer{display:none}
-  .arena-surface{transform:rotateX(42deg)}
-  .cards{justify-content:center}
+@media (max-width: 900px){
+  body.is-desktop{padding:0}
+  body.is-desktop .app{padding:16px}
+  body.is-desktop .board{grid-template-columns:minmax(0,1fr); grid-template-areas:"arena" "hand" "melds" "sidebar"}
+  body.is-desktop .right{order:0}
 }
 /* animations */
 @keyframes slideup{from{transform:translateY(12px); opacity:0} to{transform:translateY(0); opacity:1}}
