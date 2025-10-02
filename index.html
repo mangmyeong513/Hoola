@@ -73,9 +73,12 @@
       gap: 12px;
       align-items: center;
       color: var(--muted);
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
-    header .opts label {
+    header .opts label,
+    header .opts .seat-control {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -83,6 +86,29 @@
       padding: 6px 12px;
       border-radius: 999px;
       border: 1px solid rgba(93, 241, 255, 0.18);
+    }
+
+    header .opts .seat-control {
+      color: var(--ink);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    header .opts .seat-control select {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-weight: 700;
+      padding: 0 2px;
+      cursor: pointer;
+      min-width: 72px;
+    }
+
+    header .opts .seat-control select:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
     }
 
     header .opts input[type="checkbox"] {
@@ -314,6 +340,46 @@
       overflow: auto;
     }
 
+    .player-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 14px;
+      background: rgba(6, 18, 36, 0.7);
+      border: 1px solid transparent;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .player-row .name {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-weight: 600;
+    }
+
+    .player-row .name span {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+    }
+
+    .player-row .meta {
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .player-row.active {
+      border-color: rgba(93, 241, 255, 0.4);
+      box-shadow: 0 0 22px rgba(93, 241, 255, 0.18);
+    }
+
+    .player-row.out {
+      opacity: 0.45;
+    }
+
     .rankpill {
       display: inline-block;
       background: rgba(93, 241, 255, 0.15);
@@ -396,6 +462,19 @@
 
     .enter {
       animation: drop 0.2s ease;
+    }
+
+    .pulse {
+      animation: pulse-glow 1.1s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse-glow {
+      from {
+        box-shadow: 0 0 12px rgba(93, 241, 255, 0.22);
+      }
+      to {
+        box-shadow: 0 0 26px rgba(93, 241, 255, 0.45);
+      }
     }
 
     /* fly animations */
@@ -496,6 +575,14 @@
     <header>
       <h1>Hoola · 네온 3D</h1>
       <div class="opts">
+        <label class="seat-control">좌석
+          <select id="seatCount" aria-label="참가 인원 선택">
+            <option value="3">3명</option>
+            <option value="4">4명</option>
+            <option value="5">5명</option>
+            <option value="6">6명</option>
+          </select>
+        </label>
         <label><input type="checkbox" id="opt-continue" /> 아웃 후 계속(순위 확정)</label>
         <span class="badge" id="turnBadge">턴: -</span>
       </div>
@@ -583,6 +670,7 @@
 // ====== Card / Deck utils ======
 const SUITS = ['♠','♥','♦','♣'];
 const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const BOT_NAMES = ['Bot α','Bot β','Bot γ','Bot δ','Bot ε','Bot ζ'];
 const isRed = s => s==='♥' || s==='♦';
 
 function buildDeck(){
@@ -658,24 +746,73 @@ const state = {
   phase: 'choose-source', // choose-source | action | gameover
   finishOrder: [],
   options: { continueAfterOut: true },
+  seatCount: 4,
   round: 1,
   mustUseThankYouCardId: null,
   ty: { open:false, claimant:null, fromPlayerId:null, cardId:null }, // 땡큐 선착순 락
 };
 
-function newGame(){
+function localPlayerId(){
+  if (typeof net !== 'undefined' && net.online){
+    return net.isHost ? 'P1' : 'P2';
+  }
+  return 'P1';
+}
+
+function localPlayer(){
+  return state.players.find((p)=>p.id===localPlayerId()) || state.players[0];
+}
+
+function localPlayerIndex(){
+  const idx = state.players.findIndex((p)=>p.id===localPlayerId());
+  return idx >= 0 ? idx : 0;
+}
+
+function newGame(seatCount){
+  const fallback = state.seatCount ?? 4;
+  const numeric = Number(seatCount ?? fallback);
+  const sanitized = Number.isFinite(numeric) ? numeric : fallback;
+  const desired = Math.min(6, Math.max(3, sanitized));
+  state.seatCount = desired;
   state.deck = buildDeck();
   state.discard = [];
   state.melds = [];
-  state.players = [
-    { id:'P1', name:'You', isBot:false, hand:[], status:'active' },
-    { id:'P2', name:'Bot', isBot:true, hand:[], status:'active' },
-  ];
-  state.turnIndex = 0; state.phase='choose-source'; state.finishOrder=[]; state.round=1; state.mustUseThankYouCardId=null;
-  state.ty={open:false, claimant:null, fromPlayerId:null, cardId:null};
-  for(let i=0;i<7;i++) state.players.forEach(p=>p.hand.push(state.deck.pop()));
-  state.discard.push(state.deck.pop());
-  drawUI(); logMsg('게임 시작!');
+  state.players = [];
+  const addPlayer = (cfg) => {
+    state.players.push({ id: `P${state.players.length + 1}`, hand: [], status: 'active', ...cfg });
+  };
+  const localName = net.online ? (net.isHost ? 'You(Host)' : 'You') : 'You';
+  addPlayer({ name: localName, isBot: false });
+  if (net.online) {
+    addPlayer({ name: net.isHost ? 'Guest' : 'Host', isBot: false });
+  }
+  let botCursor = 0;
+  while (state.players.length < desired) {
+    addPlayer({ name: BOT_NAMES[botCursor % BOT_NAMES.length], isBot: true });
+    botCursor += 1;
+  }
+  state.turnIndex = 0;
+  state.phase = 'choose-source';
+  state.finishOrder = [];
+  state.round = 1;
+  state.mustUseThankYouCardId = null;
+  state.ty = { open: false, claimant: null, fromPlayerId: null, cardId: null };
+  pendingDiscard = null;
+  selected.clear();
+  for (let i = 0; i < 7; i += 1) {
+    state.players.forEach((p) => {
+      if (p.status === 'active') {
+        p.hand.push(state.deck.pop());
+      }
+    });
+  }
+  if (state.deck.length > 0) {
+    state.discard.push(state.deck.pop());
+  }
+  const logEl = document.getElementById('log');
+  if (logEl) logEl.innerHTML = '';
+  drawUI();
+  logMsg(`게임 시작! ${desired}명 테이블.`);
   maybeBotTurn();
 }
 
@@ -774,7 +911,7 @@ function claimThankYou(playerIndex){
 }
 
 function takeThankYou(){ // UI에서 내 입장(0번 플레이어)
-  claimThankYou(0);
+  claimThankYou(localPlayerIndex());
 }
 
 function registerSelected(kind){
@@ -839,23 +976,60 @@ function commitDiscard(){
   const topEl = document.querySelector('#discardCards .card');
   if(topEl){ const toRect = topEl.getBoundingClientRect(); flyCard(fromRect, toRect, justDiscarded); }
   // 봇이 먼저 외칠 수 있으면 즉시 선점
-  const nextIdx = nextActiveIndex(state.turnIndex);
-  const bot = state.players[nextIdx];
-  if(bot?.isBot){
-    const chk = legalThankYouFor(bot);
-    if(chk.allowed){
-      claimThankYou(nextIdx);
-      // 땡큐로 가져온 즉시 사용 시도
-      // 등록 우선 → 붙이기
-      const combos = kComb(bot.hand,1,5).sort((a,b)=>b.length-a.length);
-      for(const cs of combos){ const m=classifyMeld(cs); if(m && cs.some(c=>c.id===state.mustUseThankYouCardId)){ bot.hand = bot.hand.filter(c=>!cs.includes(c)); state.melds.push(m); logMsg(`Bot(땡큐) 등록: ${m.kind.toUpperCase()}`); state.mustUseThankYouCardId=null; break; } }
-      if(state.mustUseThankYouCardId){ // 아직 사용 못했으면 붙이기 탐색
-        for(let j=0;j<state.melds.length;j++){ const top = bot.hand.find(c=>c.id===state.mustUseThankYouCardId); if(top && canAttach(top,state.melds[j])){ bot.hand = bot.hand.filter(x=>x!==top); state.melds[j].cards.push(top); state.melds[j].cards=sortByRank(state.melds[j].cards); logMsg('Bot(땡큐) 붙이기'); state.mustUseThankYouCardId=null; break; } }
-      }
-    }
-  }
+  autoBotThankYou(state.turnIndex);
   if(afterAnyAction(p)) return;
   endTurn(); drawUI(); maybeBotTurn();
+}
+
+function autoBotThankYou(fromIndex){
+  if(!state.ty.open) return;
+  const total = state.players.length;
+  for(let step=1; step<total; step+=1){
+    const idx = (fromIndex + step) % total;
+    const bot = state.players[idx];
+    if(!bot || !bot.isBot || bot.status!=='active') continue;
+    const chk = legalThankYouFor(bot);
+    if(chk.allowed){
+      if(claimThankYou(idx)){
+        botResolveForcedThankYou(idx);
+      }
+      break;
+    }
+  }
+}
+
+function botResolveForcedThankYou(botIndex){
+  const bot = state.players[botIndex];
+  if(!bot || !state.mustUseThankYouCardId) return;
+  const forcedId = state.mustUseThankYouCardId;
+  const combos = kComb(bot.hand,1,5).sort((a,b)=>b.length-a.length);
+  for(const cs of combos){
+    if(!cs.some(c=>c.id===forcedId)) continue;
+    const m = classifyMeld(cs);
+    if(m){
+      bot.hand = bot.hand.filter(c=>!cs.includes(c));
+      state.melds.push(m);
+      logMsg(`Bot(땡큐) 등록: ${m.kind.toUpperCase()} (${pretty(m.cards)})`);
+      state.mustUseThankYouCardId=null;
+      drawUI();
+      afterAnyAction(bot);
+      return;
+    }
+  }
+  const forcedCard = bot.hand.find(c=>c.id===forcedId);
+  if(!forcedCard) return;
+  for(let j=0;j<state.melds.length;j+=1){
+    if(canAttach(forcedCard, state.melds[j])){
+      bot.hand = bot.hand.filter(x=>x!==forcedCard);
+      state.melds[j].cards.push(forcedCard);
+      state.melds[j].cards=sortByRank(state.melds[j].cards);
+      logMsg('Bot(땡큐) 붙이기');
+      state.mustUseThankYouCardId=null;
+      drawUI();
+      afterAnyAction(bot);
+      return;
+    }
+  }
 }
 
 function reshuffleFromDiscard(){
@@ -921,7 +1095,16 @@ async function botActAsync(delay){
 // ====== UI ======
 function drawUI(){
   document.getElementById('opt-continue').checked = state.options.continueAfterOut;
-  document.getElementById('turnBadge').textContent = `턴: ${current().name}`;
+  const seatSelect = document.getElementById('seatCount');
+  if (seatSelect){
+    seatSelect.value = String(state.seatCount);
+    if (typeof net !== 'undefined'){
+      seatSelect.disabled = net.online && !net.isHost;
+      seatSelect.title = seatSelect.disabled ? '온라인 게스트는 좌석을 변경할 수 없습니다.' : '';
+    }
+  }
+  const turnPlayer = current();
+  document.getElementById('turnBadge').textContent = `턴: ${turnPlayer?.name ?? '-'}`;
   document.getElementById('roundInfo').textContent = `R${state.round}${state.phase==='gameover'?' · 게임끝':''}`;
 
   const deckCount = document.getElementById('deckCount'); deckCount.textContent = `남은 장수: ${state.deck.length}`;
@@ -940,16 +1123,28 @@ function drawUI(){
   });
 
   const h = document.getElementById('hand'); h.innerHTML='';
-  const me = state.players[0];
-  me.hand.sort((a,b)=> (a.suit===b.suit? rankValue(a.rank)-rankValue(b.rank) : a.suit.localeCompare(b.suit)));
-  me.hand.forEach(c=> { const el=cardEl(c,true); el.classList.add('enter'); h.appendChild(el); });
+  const me = localPlayer();
+  if (me){
+    me.hand.sort((a,b)=> (a.suit===b.suit? rankValue(a.rank)-rankValue(b.rank) : a.suit.localeCompare(b.suit)));
+    me.hand.forEach(c=> { const el=cardEl(c,true); el.classList.add('enter'); h.appendChild(el); });
+  }
 
   const plist=document.getElementById('players'); plist.innerHTML='';
-  state.players.forEach((p)=>{
-    const line=document.createElement('div'); line.style.display='flex'; line.style.justifyContent='space-between'; line.style.margin='6px 0';
-    const left=document.createElement('div'); left.textContent = `${p.name} ${p.isBot?'🤖':'🙂'}`;
-    const right=document.createElement('div'); right.innerHTML = `<span class="rankpill">${p.status==='active'?`hand ${p.hand.length}`:'OUT'}</span>`;
-    line.appendChild(left); line.appendChild(right); plist.appendChild(line);
+  const myId = me?.id;
+  state.players.forEach((p, idx)=>{
+    const line=document.createElement('div');
+    line.className='player-row';
+    if(idx===state.turnIndex) line.classList.add('active');
+    if(p.status!=='active') line.classList.add('out');
+    const nameWrap=document.createElement('div'); nameWrap.className='name';
+    const title=document.createElement('strong'); title.textContent = `${idx+1}번 · ${p.name}`;
+    const role=document.createElement('span'); role.textContent = p.isBot ? '봇 플레이어' : (p.id===myId ? '나' : '플레이어');
+    nameWrap.appendChild(title); nameWrap.appendChild(role);
+    const meta=document.createElement('div'); meta.className='meta';
+    meta.textContent = p.status==='active' ? `패 ${p.hand.length}장` : 'OUT';
+    line.appendChild(nameWrap);
+    line.appendChild(meta);
+    plist.appendChild(line);
   });
 
   const f=document.getElementById('finish'); f.innerHTML='';
@@ -957,17 +1152,22 @@ function drawUI(){
     const li=document.createElement('li'); const nm = state.players.find(p=>p.id===pid)?.name||pid; li.textContent = `${idx+1}등 · ${nm}`; f.appendChild(li);
   });
 
-  const meTurn = current().id==='P1' && state.players[0].status==='active' && state.phase!=='gameover';
+  const meTurn = me && current().id===me.id && me.status==='active' && state.phase!=='gameover';
   document.getElementById('btnDraw').disabled = !meTurn || state.phase!=='choose-source';
   // 땡큐 버튼: 선착순 창 열려 있고, 내가 선점 안 당했고, 즉시 사용 가능해야 함
-  const tyCheck = legalThankYouFor(state.players[0]);
+  const tyCheck = me ? legalThankYouFor(me) : { allowed:false };
   const tyBtn=document.getElementById('btnTY');
-  tyBtn.disabled = !(state.ty.open && (!state.ty.claimant || state.ty.claimant==='P1') && tyCheck.allowed);
+  tyBtn.disabled = !(state.ty.open && (!state.ty.claimant || state.ty.claimant===me?.id) && tyCheck.allowed);
   tyBtn.classList.toggle('pulse', !tyBtn.disabled);
+  updateDiscardButtonState();
 }
 
 function cardEl(card, selectable){
-  const d=document.createElement('div'); d.className='card'; d.dataset.id=card.id; if(selectable) d.addEventListener('click',()=>toggleSelect(card.id,d));
+  const d=document.createElement('div'); d.className='card'; d.dataset.id=card.id;
+  if(selectable){
+    if(selected.has(card.id)) d.classList.add('selected');
+    d.addEventListener('click',()=>toggleSelect(card.id,d));
+  }
   const inner=document.createElement('div'); inner.className='inner';
   const rank=document.createElement('div'); rank.className='rank ' + (isRed(card.suit)?'red':'black'); rank.textContent=card.rank;
   const suit=document.createElement('div'); suit.className='suit ' + (isRed(card.suit)?'red':'black'); suit.textContent=card.suit;
@@ -976,7 +1176,7 @@ function cardEl(card, selectable){
 
 const selected = new Set();
 function toggleSelect(id, el){ if(selected.has(id)){ selected.delete(id); el.classList.remove('selected'); } else { selected.add(id); el.classList.add('selected'); } updateDiscardButtonState(); }
-function selectedFromHand(){ const me=state.players[0]; const ids=[...selected]; const out=[]; ids.forEach(id=>{ const c=me.hand.find(x=>x.id===id); if(c) out.push(c); }); return out; }
+function selectedFromHand(){ const me=localPlayer(); if(!me) return []; const ids=[...selected]; const out=[]; ids.forEach(id=>{ const c=me.hand.find(x=>x.id===id); if(c) out.push(c); }); return out; }
 function clearSelection(){ selected.clear(); updateDiscardButtonState(); }
 
 // ====== UX helpers ======
@@ -1003,7 +1203,13 @@ function showToast(message, ms=1200){
 function logMsg(msg){ const l=document.getElementById('log'); if(!l){ console.log('[LOG]', msg); return; } const line=document.createElement('div'); line.textContent=msg; l.appendChild(line); l.scrollTop=l.scrollHeight; }
 function cardText(c){ return `${c.rank}${c.suit}`; }
 function pretty(cards){ return cards.map(cardText).join(' '); }
-function updateDiscardButtonState(){ const btn = document.getElementById('btnDiscard'); const meTurn = current().id==='P1' && state.players[0].status==='active' && state.phase!=='gameover'; const one = selectedFromHand().length===1; btn.disabled = !(meTurn && state.phase!=='choose-source' && one && !state.mustUseThankYouCardId); }
+function updateDiscardButtonState(){
+  const btn = document.getElementById('btnDiscard');
+  const me = localPlayer();
+  const meTurn = me && current().id===me.id && me.status==='active' && state.phase!=='gameover';
+  const one = selectedFromHand().length===1;
+  btn.disabled = !(meTurn && state.phase!=='choose-source' && one && !state.mustUseThankYouCardId);
+}
 
 // ====== Networking (P2P WebRTC, copy-paste SDP) ======
 const net = { role:null, pc:null, dc:null, online:false, isHost:false };
@@ -1030,12 +1236,12 @@ async function guestStart(){
 async function hostApplyAnswer(){ const ansStr = document.getElementById('sdpIn').value.trim(); if(!ansStr) return showToast('게스트 코드를 붙여넣으세요'); const ans = JSON.parse(atob(ansStr)); await net.pc.setRemoteDescription(ans); }
 function wireDataChannel(dc){
   dc.onopen=()=>{ net.online=true; netBadge().textContent='온라인'; netBadge().style.background='#eaffea'; netBadge().style.color='#137a13';
-    state.players = [ { id:'P1', name: net.isHost? 'You(Host)':'You', isBot:false, hand:[], status:'active' }, { id:'P2', name: net.isHost? 'Guest':'Host', isBot:false, hand:[], status:'active' }, ];
-    if(net.isHost){ newGame(); sendSnapshot(); }
+    if(net.isHost){ newGame(state.seatCount); sendSnapshot(); }
+    else { drawUI(); }
   };
   dc.onmessage=(e)=>{
     const msg = JSON.parse(e.data);
-    if(msg.t==='snapshot'){ Object.assign(state, msg.state); drawUI(); return; }
+    if(msg.t==='snapshot'){ Object.assign(state, msg.state); selected.clear(); pendingDiscard=null; drawUI(); return; }
     if(!net.isHost){ return; }
     handleRemoteAction(msg);
   };
@@ -1057,31 +1263,42 @@ function handleRemoteAction(a){
     } break;
     case 'register': {
       if(current().id!=='P2' || state.phase==='gameover') break;
-      const p = state.players[1];
+      const idx = state.players.findIndex(pl=>pl.id==='P2');
+      if(idx<0) break;
+      const p = state.players[idx];
       const cards = p.hand.filter(c=>a.ids.includes(c.id));
       if(state.mustUseThankYouCardId && !cards.some(c=>c.id===state.mustUseThankYouCardId)) break;
       const m = classifyMeld(cards);
       if(!m) break; if(a.kind && m.kind!==a.kind) break;
       p.hand = p.hand.filter(c=>!cards.includes(c)); state.melds.push(m); logMsg(`Remote 등록: ${m.kind}`);
       if(state.mustUseThankYouCardId && cards.some(c=>c.id===state.mustUseThankYouCardId)) state.mustUseThankYouCardId=null;
+      drawUI();
       afterAnyAction(p);
     } break;
     case 'attach': {
       if(current().id!=='P2' || state.phase==='gameover') break;
-      const p=state.players[1]; const card=p.hand.find(c=>c.id===a.id); if(!card) break;
+      const idx = state.players.findIndex(pl=>pl.id==='P2');
+      if(idx<0) break;
+      const p=state.players[idx]; const card=p.hand.find(c=>c.id===a.id); if(!card) break;
       if(state.mustUseThankYouCardId && card.id!==state.mustUseThankYouCardId) break;
       let targetIndex = -1; for(let j=0;j<state.melds.length;j++){ if(canAttach(card, state.melds[j])) { targetIndex=j; break; } }
       if(targetIndex>=0){
         const m=state.melds[targetIndex]; p.hand=p.hand.filter(x=>x!==card); m.cards.push(card); m.cards=sortByRank(m.cards); logMsg('Remote 붙이기');
-        if(state.mustUseThankYouCardId===card.id) state.mustUseThankYouCardId=null; afterAnyAction(p);
+        if(state.mustUseThankYouCardId===card.id) state.mustUseThankYouCardId=null; drawUI(); afterAnyAction(p);
       }
     } break;
     case 'discard': {
       if(current().id!=='P2' || state.phase==='gameover') break;
       if(state.mustUseThankYouCardId) break;
-      const p=state.players[1]; const card=p.hand.find(c=>c.id===a.id); if(!card) break; p.hand=p.hand.filter(x=>x!==card); state.discard.push(card);
+      const idx = state.players.findIndex(pl=>pl.id==='P2');
+      if(idx<0) break;
+      const p=state.players[idx]; const card=p.hand.find(c=>c.id===a.id); if(!card) break; p.hand=p.hand.filter(x=>x!==card); state.discard.push(card);
       state.ty = { open:true, claimant:null, fromPlayerId:p.id, cardId:card.id };
+      autoBotThankYou(idx);
+      if(afterAnyAction(p)) break;
       endTurn();
+      drawUI();
+      maybeBotTurn();
     } break;
   }
   sendSnapshot();
@@ -1095,22 +1312,67 @@ const elRegRun=document.getElementById('btnRegRun');
 const elAttach=document.getElementById('btnAttach');
 const elPendDiscard=document.getElementById('btnDiscard');
 const elReset=document.getElementById('btnReset');
+const seatSelect=document.getElementById('seatCount');
 
-elDraw.onclick=()=>{ if(net.online && !net.isHost && current().id==='P2') sendAction({t:'draw'}); else { drawFromDeck(); sendSnapshot(); } };
+const isRemoteClient = ()=> typeof net !== 'undefined' && net.online && !net.isHost;
+const localId = ()=> localPlayerId();
+
+elDraw.onclick=()=>{
+  if(isRemoteClient()){
+    if(current().id===localId()) sendAction({t:'draw'});
+  } else {
+    if(current().id===localId()) { drawFromDeck(); sendSnapshot(); }
+  }
+};
 elTY.onclick=()=>{
-  if(net.online && !net.isHost){ sendAction({t:'thankyou-claim'}); }
+  if(isRemoteClient()){
+    sendAction({t:'thankyou-claim'});
+  }
   else { takeThankYou(); sendSnapshot(); }
 };
-elRegSet.onclick=()=>{ const ids = selectedFromHand().map(c=>c.id); if(net.online && !net.isHost && current().id==='P2') sendAction({t:'register', kind:'set', ids}); else { registerSelected('set'); sendSnapshot(); } };
-elRegRun.onclick=()=>{ const ids = selectedFromHand().map(c=>c.id); if(net.online && !net.isHost && current().id==='P2') sendAction({t:'register', kind:'run', ids}); else { registerSelected('run'); sendSnapshot(); } };
-elAttach.onclick=()=>{ const sel = selectedFromHand(); if(sel.length!==1){ attachSelected(); sendSnapshot(); return; } const id = sel[0].id; if(net.online && !net.isHost && current().id==='P2') sendAction({t:'attach', id}); else { attachSelected(); sendSnapshot(); } };
+elRegSet.onclick=()=>{
+  const ids = selectedFromHand().map(c=>c.id);
+  if(isRemoteClient()){
+    if(current().id===localId()) sendAction({t:'register', kind:'set', ids});
+  } else { registerSelected('set'); sendSnapshot(); }
+};
+elRegRun.onclick=()=>{
+  const ids = selectedFromHand().map(c=>c.id);
+  if(isRemoteClient()){
+    if(current().id===localId()) sendAction({t:'register', kind:'run', ids});
+  } else { registerSelected('run'); sendSnapshot(); }
+};
+elAttach.onclick=()=>{
+  const sel = selectedFromHand();
+  if(isRemoteClient()){
+    if(current().id===localId()){
+      if(sel.length===1) sendAction({t:'attach', id: sel[0].id});
+      else showToast('붙이기는 1장만 선택');
+    }
+  } else { attachSelected(); sendSnapshot(); }
+};
 
-document.getElementById('hand').addEventListener('dblclick', ()=>{ setDiscard(); });
+document.getElementById('hand').addEventListener('dblclick', ()=>{ if(!isRemoteClient()) setDiscard(); });
 elPendDiscard.onclick=()=>{
-  if(net.online && !net.isHost && current().id==='P2'){
-    const sel = selectedFromHand(); if(sel.length===1) sendAction({t:'discard', id: sel[0].id});
+  if(isRemoteClient()){
+    if(current().id===localId()){
+      const sel = selectedFromHand(); if(sel.length===1) sendAction({t:'discard', id: sel[0].id});
+      else showToast('버릴 카드를 1장 선택하세요');
+    }
   } else { commitDiscard(); sendSnapshot(); }
 };
+if(seatSelect){
+  seatSelect.addEventListener('change',(e)=>{
+    const next = Number(e.target.value);
+    if(isRemoteClient()){
+      showToast('온라인 플레이 중에는 좌석을 변경할 수 없어요');
+      drawUI();
+      return;
+    }
+    newGame(next);
+    sendSnapshot();
+  });
+}
 
 document.getElementById('opt-continue').addEventListener('change', (e)=>{ state.options.continueAfterOut = e.target.checked; sendSnapshot(); });
 
