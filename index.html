@@ -3,744 +3,648 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hoola (훌라) — 귀염뽀짝 2.5D MVP</title>
+  <title>Hoola (훌라) — 3D 네온 아레나</title>
   <style>
-    :root{
-      --bg:#f7f7fb; --ink:#1d2230; --muted:#7a839a; --primary:#8ea8ff; --accent:#ffd1e8; --ok:#8be28b; --warn:#ffc66b; --danger:#ff7b8a;
-      --card:#fff; --shadow: 0 8px 18px rgba(20,24,40,.12), 0 2px 6px rgba(20,24,40,.08);
-      --radius:18px;
+    :root {
+      color-scheme: light;
+      --bg: #040b16;
+      --bg-alt: radial-gradient(circle at 20% -10%, rgba(110, 80, 255, 0.25), transparent 60%),
+                 radial-gradient(circle at 110% 0%, rgba(255, 112, 188, 0.2), transparent 55%),
+                 #050915;
+      --ink: #f7f9ff;
+      --muted: rgba(247, 249, 255, 0.7);
+      --accent: #5df1ff;
+      --accent-strong: #ff86d5;
+      --panel: rgba(10, 18, 36, 0.76);
+      --panel-border: rgba(93, 241, 255, 0.22);
+      --glow: 0 30px 80px rgba(53, 105, 255, 0.28), 0 18px 40px rgba(14, 214, 255, 0.22);
+      --radius: 24px;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Segoe UI", system-ui, sans-serif;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:ui-rounded,system-ui,Segoe UI,Apple SD Gothic Neo,Pretendard,Roboto,sans-serif;background:
-      radial-gradient(1200px 600px at 10% -10%, #eef2ff 0%, transparent 60%),
-      radial-gradient(800px 400px at 110% 0%, #ffe9f4 0%, transparent 60%), var(--bg); color:var(--ink)}
-    .app{display:grid;grid-template-rows:auto 1fr auto; gap:12px; height:100%; max-width:1200px; margin:0 auto; padding:14px}
-    header{display:flex; align-items:center; justify-content:space-between}
-    header h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.2px}
-    header .opts{display:flex; gap:8px; align-items:center; color:var(--muted)}
-    .board{display:grid; grid-template-columns: 1fr 320px; gap:16px; height:100%}
-    .table{position:relative; border-radius:24px; box-shadow: var(--shadow); padding:14px; overflow:auto;
-      background: linear-gradient(180deg,#f9fbff,#eef3ff);
-      background-image:
-        radial-gradient(1200px 600px at 50% -20%, rgba(255,255,255,.8) 0%, rgba(255,255,255,0) 60%),
-        repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0 1px, transparent 1px 32px);
+
+    * {
+      box-sizing: border-box;
     }
-    .right{display:flex; flex-direction:column; gap:12px}
-    .panel{background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:12px}
-    .zones{display:grid; grid-template-columns: repeat(3, 1fr); gap:12px}
-    .zone{background:#fff; border-radius:18px; box-shadow:var(--shadow); padding:10px; min-height:110px; display:flex; flex-direction:column; gap:6px}
-    .zone h3{margin:0 0 6px 0; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px}
 
-    /* card visuals */
-    .cards{display:flex; align-items:flex-end; flex-wrap:wrap; gap:8px}
-    .card{width:70px; height:98px; border-radius:16px; background:var(--card); box-shadow: var(--shadow); position:relative; transform:translateZ(0); transition:.25s transform, .25s box-shadow, .25s opacity; cursor:pointer; user-select:none}
-    .card:hover{transform:translateY(-6px) rotate(-.6deg)}
-    .card .inner{position:absolute; inset:0; border-radius:inherit; display:grid; place-items:center; padding:6px}
-    .rank{font-weight:900; font-size:22px}
-    .suit{font-size:18px}
-    .red{color:#e34d5c} .black{color:#2b2f3a}
-    .selected{outline:3px solid var(--primary); outline-offset:0}
-    .disabled{opacity:.45; pointer-events:none}
+    html,
+    body {
+      height: 100%;
+    }
 
-    /* meld stack */
-    .meld{padding:12px; border-radius:14px; background:linear-gradient(180deg,#ffffff,#f7f9ff); box-shadow:var(--shadow); animation:pop .25s ease}
-    .meld .cards{gap: -46px}
-    .meld .card{transform:rotate(0)}
+    body {
+      margin: 0;
+      background: var(--bg-alt);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
 
-    .hand{position:sticky; bottom:0}
+    body.mobile {
+      background: linear-gradient(160deg, #0a1430 0%, #060913 70%);
+    }
 
-    .hud{display:flex; flex-wrap:wrap; gap:8px}
-    button{appearance:none; border:none; background:var(--ink); color:#fff; padding:10px 12px; border-radius:14px; font-weight:700; cursor:pointer; box-shadow: var(--shadow)}
-    button.ghost{background:#fff; color:var(--ink); border:2px solid #e8ebff}
-    button:disabled{opacity:.4; cursor:not-allowed}
-    .badge{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#fff; box-shadow:var(--shadow); font-size:12px; color:var(--muted)}
+    .app {
+      width: min(1100px, 100%);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+    }
 
-    .log{font-size:12px; color:var(--muted); max-height:160px; overflow:auto}
-    .rankpill{display:inline-block;background:#eef1ff;color:#5364c7;padding:2px 8px;border-radius:999px;font-weight:700}
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
 
-    .toast{position:fixed; right:16px; bottom:16px; background:#111827; color:#fff; padding:10px 12px; border-radius:12px; opacity:.95; animation:slideup .25s ease}
-    .pill{display:inline-block; padding:3px 8px; border-radius:999px; background:#eef4ff; color:#4b61d1; font-weight:700}
+    .topbar h1 {
+      margin: 0;
+      font-size: clamp(1.3rem, 2vw, 1.8rem);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
 
-    /* animations */
-    @keyframes slideup{from{transform:translateY(12px); opacity:0} to{transform:translateY(0); opacity:1}}
-    @keyframes pop{from{transform:scale(.96)} to{transform:scale(1)}}
-    @keyframes drop{from{transform:translateY(-10px); opacity:.6} to{transform:translateY(0); opacity:1}}
-    .enter{animation:drop .2s ease}
+    .tagline {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
 
-    /* fly animations */
-    .flycard{position:fixed; pointer-events:none; z-index:9999; width:70px; height:98px; border-radius:16px; background:#fff; box-shadow:var(--shadow); display:grid; place-items:center; transition:transform .28s ease, opacity .28s ease}
-    .flyrank{font-weight:900; font-size:22px}
-    .flysuit{font-size:18px}
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    select,
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 14px;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+    }
+
+    select {
+      background: rgba(10, 18, 36, 0.76);
+      color: var(--ink);
+      border: 1px solid rgba(93, 241, 255, 0.25);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35) inset;
+    }
+
+    button {
+      background: linear-gradient(135deg, #4c7cff, #5df1ff);
+      color: #021024;
+      box-shadow: var(--glow);
+      cursor: pointer;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 32px 70px rgba(93, 241, 255, 0.38);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button.ghost {
+      background: rgba(4, 15, 32, 0.9);
+      color: var(--ink);
+      border: 1px solid rgba(93, 241, 255, 0.35);
+    }
+
+    button.accent {
+      background: linear-gradient(135deg, #ff86d5, #ffc886);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 3fr 1.4fr;
+      gap: 20px;
+    }
+
+    .arena {
+      position: relative;
+      background: rgba(5, 14, 28, 0.72);
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid rgba(93, 241, 255, 0.18);
+      box-shadow: 0 40px 80px rgba(5, 10, 30, 0.65);
+      overflow: hidden;
+    }
+
+    .arena-persp {
+      perspective: 1200px;
+    }
+
+    .arena-surface {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      border-radius: 36px;
+      background: radial-gradient(circle at 50% 35%, rgba(93, 241, 255, 0.2), transparent 60%),
+                  linear-gradient(160deg, rgba(19, 45, 92, 0.95), rgba(5, 8, 16, 0.85));
+      transform: rotateX(22deg) rotateZ(-4deg);
+      transform-origin: center;
+      box-shadow: inset 0 0 0 1px rgba(93, 241, 255, 0.18), inset 0 0 80px rgba(93, 241, 255, 0.25), 0 80px 120px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+    }
+
+    .table-glow {
+      position: absolute;
+      inset: 10% 20%;
+      background: radial-gradient(circle, rgba(255, 134, 213, 0.45), transparent 65%);
+      filter: blur(60px);
+      pointer-events: none;
+    }
+
+    .arena-center {
+      position: absolute;
+      inset: 30% 25% 18% 25%;
+      display: grid;
+      place-items: center;
+    }
+
+    .hud {
+      display: flex;
+      gap: 14px;
+    }
+
+    .deck,
+    .discard {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .deck {
+      top: 20%;
+      left: 24%;
+    }
+
+    .discard {
+      top: 22%;
+      right: 23%;
+    }
+
+    .card {
+      position: relative;
+      width: 68px;
+      height: 96px;
+      border-radius: 14px;
+      background: rgba(247, 249, 255, 0.95);
+      color: #051028;
+      box-shadow: 0 20px 40px rgba(5, 10, 30, 0.45);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 1.6rem;
+      text-shadow: 0 2px 12px rgba(10, 18, 36, 0.4);
+    }
+
+    .card-back {
+      background: linear-gradient(135deg, rgba(93, 241, 255, 0.9), rgba(76, 124, 255, 0.9));
+      border: 2px solid rgba(3, 12, 40, 0.4);
+    }
+
+    .card-back + .card-back {
+      margin-top: -50px;
+      transform: translateZ(20px);
+      opacity: 0.9;
+    }
+
+    .card-back + .card-back + .card-back {
+      margin-top: -50px;
+      transform: translateZ(40px);
+      opacity: 0.75;
+    }
+
+    .rank {
+      font-size: 1.8rem;
+    }
+
+    .suit {
+      font-size: 1.5rem;
+    }
+
+    .suit.red {
+      color: #ff3f70;
+    }
+
+    .seat-ring {
+      position: absolute;
+      inset: 0;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .seat-ring li {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 160px;
+      padding: 14px 18px;
+      border-radius: 18px;
+      background: rgba(7, 16, 34, 0.8);
+      border: 1px solid rgba(93, 241, 255, 0.25);
+      box-shadow: 0 24px 60px rgba(5, 10, 30, 0.5);
+      text-align: center;
+      transform-origin: center;
+      backdrop-filter: blur(8px);
+      transition: transform 0.3s ease;
+      pointer-events: none;
+    }
+
+    .seat-ring li strong {
+      display: block;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+    }
+
+    .seat-ring li span {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .seat-ring li[data-bot="true"] strong::after {
+      content: " · BOT";
+      color: #ff86d5;
+    }
+
+    .panel {
+      background: var(--panel);
+      border-radius: var(--radius);
+      border: 1px solid var(--panel-border);
+      padding: 20px;
+      display: grid;
+      gap: 14px;
+      box-shadow: 0 35px 65px rgba(2, 8, 22, 0.7);
+    }
+
+    .panel header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+
+    .hand {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .log {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .log li {
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: rgba(6, 14, 28, 0.72);
+      border: 1px solid rgba(93, 241, 255, 0.12);
+      font-size: 0.86rem;
+      letter-spacing: 0.02em;
+    }
+
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: rgba(3, 8, 20, 0.75);
+      padding: 16px 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(93, 241, 255, 0.18);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .badge {
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: rgba(10, 22, 42, 0.8);
+      border: 1px solid rgba(93, 241, 255, 0.3);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    body.mobile .layout {
+      grid-template-columns: 1fr;
+    }
+
+    body.mobile .arena {
+      order: 0;
+    }
+
+    body.mobile .arena-persp {
+      perspective: none;
+    }
+
+    body.mobile .arena-surface {
+      transform: none;
+      aspect-ratio: unset;
+      min-height: 320px;
+    }
+
+    body.mobile .seat-ring li {
+      position: static;
+      width: 100%;
+      transform: none !important;
+      pointer-events: auto;
+    }
+
+    body.mobile .seat-ring {
+      position: static;
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    body.mobile .controls {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    body.mobile .controls select {
+      width: 100%;
+    }
+
+    body.mobile .topbar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    body.mobile .hand {
+      justify-content: center;
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 18px;
+      }
+
+      .controls {
+        width: 100%;
+      }
+
+      .control {
+        width: 100%;
+      }
+
+      select {
+        width: 100%;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .hud {
+        flex-direction: column;
+      }
+
+      .hand {
+        justify-content: center;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="app">
-    <header>
-      <h1>Hoola · 귀염뽀짝 2.5D</h1>
-      <div class="opts">
-        <label><input type="checkbox" id="opt-continue" /> 아웃 후 계속(순위 확정)</label>
-        <span class="badge" id="turnBadge">턴: -</span>
+    <header class="topbar">
+      <div>
+        <h1>Hoola · 3D Arena</h1>
+        <p class="tagline">최소 3명 · 최대 6명 · 부족 시 봇 자동 충원</p>
+      </div>
+      <div class="controls">
+        <label class="control">
+          <span>플레이어 수</span>
+          <select id="seatSelect" aria-label="플레이어 수 선택">
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </label>
+        <button id="reshuffle" type="button">새 게임</button>
       </div>
     </header>
 
-    <div class="board">
-      <div class="table" id="table">
-        <div class="zones">
-          <div class="zone" id="deckZone">
-            <h3>DECK</h3>
-            <div class="cards" id="deckCount"></div>
-            <div class="hud"><button id="btnDraw">드로우</button><button id="btnTY" class="ghost">땡큐</button></div>
-          </div>
-          <div class="zone" id="discardZone">
-            <h3>DISCARD</h3>
-            <div class="cards" id="discardCards"></div>
-          </div>
-          <div class="zone" id="infoZone">
-            <h3>INFO</h3>
-            <div class="log" id="log"></div>
-          </div>
-        </div>
-
-        <div style="height:10px"></div>
-        <div class="panel">
-          <h3 style="margin:0 0 6px 0;color:var(--muted)">TABLE MELDS</h3>
-          <div id="melds" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px"></div>
-        </div>
-
-        <div style="height:10px"></div>
-        <div class="panel hand">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
-            <h3 style="margin:0;color:var(--muted)">YOUR HAND</h3>
-            <div class="hud">
-              <button id="btnRegSet" class="ghost">세트 등록</button>
-              <button id="btnRegRun" class="ghost">런 등록</button>
-              <button id="btnAttach" class="ghost">붙이기</button>
-              <button id="btnDiscard" style="background:var(--danger)" disabled>버리고 종료</button>
+    <main class="layout">
+      <section class="arena" aria-label="훌라 테이블">
+        <div class="arena-persp">
+          <div class="arena-surface">
+            <div class="table-glow"></div>
+            <div class="deck" aria-label="덱">
+              <div class="card card-back"></div>
+              <div class="card card-back"></div>
+              <div class="card card-back"></div>
+              <span class="label">DECK</span>
             </div>
-          </div>
-          <div class="cards" id="hand"></div>
-        </div>
-      </div>
-
-      <aside class="right">
-        <div class="panel">
-          <div style="display:flex; align-items:center; justify-content:space-between">
-            <strong>Players</strong>
-            <span class="pill" id="roundInfo">R1</span>
-          </div>
-          <div id="players"></div>
-        </div>
-        <div class="panel">
-          <strong>Finish Order</strong>
-          <ol id="finish"></ol>
-        </div>
-        <div class="panel">
-          <strong>온라인 플레이(베타)</strong>
-          <div style="display:flex; gap:8px; margin:8px 0">
-            <button id="btnHost" class="ghost">호스트</button>
-            <button id="btnJoin" class="ghost">게스트</button>
-          </div>
-          <small style="color:var(--muted)">SDP 코드를 복사/붙여넣기로 연결합니다(서버 없이 P2P).</small>
-          <div style="margin-top:8px">
-            <textarea id="sdpIn" placeholder="상대 코드 붙여넣기" style="width:100%; height:80px; border-radius:12px; padding:8px; border:1px solid #e5e9ff"></textarea>
-            <textarea id="sdpOut" placeholder="내 코드" style="width:100%; height:80px; border-radius:12px; padding:8px; border:1px solid #e5e9ff; margin-top:6px" readonly></textarea>
-            <div style="display:flex; gap:6px; margin-top:6px">
-              <button id="btnApply" class="ghost">코드 적용</button>
-              <span class="badge" id="netBadge">오프라인</span>
+            <div class="discard" aria-label="버린 카드">
+              <div class="card">
+                <span class="rank">Q</span>
+                <span class="suit red">♥</span>
+              </div>
+              <span class="label">DISCARD</span>
+            </div>
+            <div class="arena-center">
+              <div class="hud">
+                <button type="button">드로우</button>
+                <button type="button" class="ghost">땡큐</button>
+                <button type="button" class="accent">등록</button>
+              </div>
             </div>
           </div>
         </div>
-      </aside>
-    </div>
+        <ul class="seat-ring" id="seatRing" aria-label="좌석 목록"></ul>
+      </section>
 
-    <footer style="display:flex; align-items:center; justify-content:space-between; color:var(--muted)">
-      <div>MVP: 1 Human + 1 Bot · 규칙: 드로우/땡큐 → 등록/붙이기(선택) → 버리기</div>
-      <button id="btnReset" class="ghost">새 게임</button>
+      <section class="panel" aria-label="현재 손패">
+        <header>
+          <h2>내 손패</h2>
+          <span class="hint">버려서 턴 종료</span>
+        </header>
+        <div class="hand">
+          <div class="card">
+            <span class="rank">7</span>
+            <span class="suit">♣</span>
+          </div>
+          <div class="card">
+            <span class="rank">7</span>
+            <span class="suit">♠</span>
+          </div>
+          <div class="card">
+            <span class="rank">8</span>
+            <span class="suit red">♦</span>
+          </div>
+          <div class="card">
+            <span class="rank">9</span>
+            <span class="suit">♣</span>
+          </div>
+          <div class="card">
+            <span class="rank">10</span>
+            <span class="suit red">♥</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="게임 로그">
+        <header>
+          <h2>라운드 정보</h2>
+          <span class="hint">턴 순서 &amp; 로그</span>
+        </header>
+        <ol id="logList" class="log" aria-live="polite"></ol>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <small>모바일에서는 평면 모드로 전환되어 조작이 쉬워집니다.</small>
+      <div class="badge" id="modeBadge" aria-live="polite">Desktop 3D</div>
     </footer>
   </div>
 
-  <div class="toast" id="toast" style="display:none"></div>
+  <script>
+    (function () {
+      var seatSelect = document.getElementById('seatSelect');
+      var seatRing = document.getElementById('seatRing');
+      var logList = document.getElementById('logList');
+      var modeBadge = document.getElementById('modeBadge');
+      var reshuffle = document.getElementById('reshuffle');
+      var currentModeLabel = '';
 
-<script>
-// ====== Card / Deck utils ======
-const SUITS = ['♠','♥','♦','♣'];
-const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-const isRed = s => s==='♥' || s==='♦';
+      var humanNames = ['YOU', 'ALLY', 'RIVAL'];
+      var botNames = ['네온봇 α', '네온봇 β', '네온봇 γ'];
+      var activity = ['드로우', '땡큐 대기', '등록 준비', '버림'];
 
-function buildDeck(){
-  const deck=[]; let id=0;
-  for(const s of SUITS){ for(const r of RANKS){ deck.push({ id: String(id++), suit: s, rank: r }); } }
-  return shuffle(deck);
-}
-function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
-function rankValue(r){ if(r==='A') return 1; if(r==='J') return 11; if(r==='Q') return 12; if(r==='K') return 13; return parseInt(r,10); }
-function sortByRank(cards){ return [...cards].sort((a,b)=>rankValue(a.rank)-rankValue(b.rank)); }
-
-// ====== Meld validation ======
-function isSet(cards){ if(cards.length<3) return false; const r = cards[0].rank; return cards.every(c=>c.rank===r); }
-function isRun(cards){
-  if(cards.length<3) return false; const suit=cards[0].suit; if(!cards.every(c=>c.suit===suit)) return false;
-  const sorted = sortByRank(cards);
-  let ok = true; for(let i=1;i<sorted.length;i++){ if(rankValue(sorted[i].rank)!==rankValue(sorted[i-1].rank)+1) { ok=false; break; } }
-  if(ok) return true;
-  const mapHigh = x=> x.rank==='A'?14:rankValue(x.rank);
-  const s2 = [...cards].sort((a,b)=>mapHigh(a)-mapHigh(b));
-  ok=true; for(let i=1;i<s2.length;i++){ if(mapHigh(s2[i])!==mapHigh(s2[i-1])+1){ ok=false; break; } }
-  return ok;
-}
-function canAttach(card, meld){
-  if(meld.kind==='seven') return false; // 7 단독 등록에는 붙일 수 없음
-  if(meld.kind==='set'){
-    const cs = [...meld.cards, card];
-    return isSet(cs);
-  }
-  if(meld.kind==='run'){
-    return canAttachRunEnds(card, meld.cards);
-  }
-  return false;
-}
-function canAttachRunEnds(card, runCards){
-  // 붙이기는 "양 끝"에만 허용. 중간 삽입 금지.
-  if(runCards.length<3) return false;
-  const suit = runCards[0].suit;
-  if(!runCards.every(c=>c.suit===suit)) return false;
-  if(card.suit!==suit) return false;
-  const mapLow = x=> rankValue(x.rank);
-  const mapHigh = x=> x.rank==='A'?14:rankValue(x.rank);
-  const numsLow = [...runCards].map(mapLow).sort((a,b)=>a-b);
-  const numsHigh = [...runCards].map(mapHigh).sort((a,b)=>a-b);
-  const isConsecutive = (arr)=> arr.every((v,i)=> i===0 || v===arr[i-1]+1);
-  let allow=false;
-  const vLow = mapLow(card);
-  const vHigh = mapHigh(card);
-  if(isConsecutive(numsLow)){
-    const lowMin = numsLow[0], lowMax = numsLow[numsLow.length-1];
-    if(vLow===lowMin-1 || vLow===lowMax+1) allow=true;
-  }
-  if(!allow && isConsecutive(numsHigh)){
-    const hiMin = numsHigh[0], hiMax = numsHigh[numsHigh.length-1];
-    if(vHigh===hiMin-1 || vHigh===hiMax+1) allow=true;
-  }
-  return allow && isRun([...runCards, card]);
-}
-function classifyMeld(cards){
-  if(cards.length===1 && cards[0].rank==='7') return { kind:'seven', cards:[...cards] };
-  if(isSet(cards)) return { kind:'set', cards: sortByRank(cards) };
-  if(isRun(cards)) return { kind:'run', cards: sortByRank(cards) };
-  return null;
-}
-
-// ====== State ======
-const state = {
-  deck: [],
-  discard: [],
-  melds: [],
-  players: [],
-  turnIndex: 0,
-  phase: 'choose-source', // choose-source | action | gameover
-  finishOrder: [],
-  options: { continueAfterOut: true },
-  round: 1,
-  mustUseThankYouCardId: null,
-  ty: { open:false, claimant:null, fromPlayerId:null, cardId:null }, // 땡큐 선착순 락
-};
-
-function newGame(){
-  state.deck = buildDeck();
-  state.discard = [];
-  state.melds = [];
-  state.players = [
-    { id:'P1', name:'You', isBot:false, hand:[], status:'active' },
-    { id:'P2', name:'Bot', isBot:true, hand:[], status:'active' },
-  ];
-  state.turnIndex = 0; state.phase='choose-source'; state.finishOrder=[]; state.round=1; state.mustUseThankYouCardId=null;
-  state.ty={open:false, claimant:null, fromPlayerId:null, cardId:null};
-  for(let i=0;i<7;i++) state.players.forEach(p=>p.hand.push(state.deck.pop()));
-  state.discard.push(state.deck.pop());
-  drawUI(); logMsg('게임 시작!');
-  maybeBotTurn();
-}
-
-function current(){ return state.players[state.turnIndex]; }
-function nextActiveIndex(from){ const n=state.players.length; for(let k=1;k<=n;k++){ const idx=(from+k)%n; if(state.players[idx].status==='active') return idx; } return from; }
-
-// ====== Rules helpers ======
-function legalThankYouFor(player){
-  const top = state.discard[state.discard.length-1]; if(!top) return {allowed:false};
-  if(!state.ty.open) return {allowed:false};
-  // 본인이 방금 버린 카드는 땡큐 불가
-  if(state.ty.fromPlayerId===player.id) return {allowed:false};
-  // 드로우/땡큐 중복 금지: 현재 턴의 phase가 choose-source가 아니어도, 땡큐는 인터럽트로 허용하지만 즉시 사용 가능한 경우만
-  // 등록/붙이기 가능 여부 검사
-  // 테이블 붙이기 체크
-  for(let i=0;i<state.melds.length;i++){ if(canAttach(top, state.melds[i])) return {allowed:true, card:top, mode:'attach'}; }
-  // 등록 체크 (7 단독 포함)
-  const trial = [...player.hand, top];
-  const combos = kComb(trial, 1, 5);
-  for(const c of combos){ const m=classifyMeld(c); if(m && c.some(x=>x.id===top.id)) return {allowed:true, card:top, mode:'register'}; }
-  return {allowed:false};
-}
-
-function kComb(arr, minK=3, maxK=5){
-  const res=[]; const n=arr.length; const max=Math.min(maxK,n);
-  function rec(start, combo){
-    if(combo.length>=minK) res.push([...combo]);
-    if(combo.length===max) return;
-    for(let i=start;i<n;i++){ combo.push(arr[i]); rec(i+1, combo); combo.pop(); }
-  }
-  rec(0,[]); return res;
-}
-
-function afterAnyAction(player){
-  if(player.status==='active' && player.hand.length===0){
-    player.status='out'; state.finishOrder.push(player.id);
-    showToast(`${player.name} 아웃!`);
-    state.mustUseThankYouCardId=null;
-    state.ty={open:false, claimant:null, fromPlayerId:null, cardId:null};
-    if(!state.options.continueAfterOut){ state.phase='gameover'; drawUI(); return true; }
-    const left = state.players.filter(p=>p.status==='active').length;
-    if(left<=1){
-      const last = state.players.find(p=>p.status==='active');
-      if(last){ last.status='out'; state.finishOrder.push(last.id); }
-      state.phase='gameover'; drawUI(); return true;
-    }
-    const idxNow = state.turnIndex;
-    if(state.players[idxNow].id===player.id){ state.turnIndex = nextActiveIndex(idxNow); state.phase='choose-source'; }
-  }
-  return false;
-}
-
-function endTurn(){
-  state.turnIndex = nextActiveIndex(state.turnIndex);
-  state.phase='choose-source';
-  state.mustUseThankYouCardId=null;
-  // 턴 넘어가면 땡큐 창 닫힘(선착순 창은 버린 직후에만)
-  state.ty={open:false, claimant:null, fromPlayerId:null, cardId:null};
-}
-
-// ====== Actions ======
-function drawFromDeck(){
-  const p=current(); if(state.phase!=='choose-source') return;
-  if(state.deck.length===0){ reshuffleFromDiscard(); }
-  if(state.deck.length===0) { logMsg('덱 고갈!'); return; }
-  const fromRect = document.getElementById('deckZone').getBoundingClientRect();
-  const newCard = state.deck.pop();
-  p.hand.push(newCard);
-  state.phase='action';
-  // 드로우한 순간에는 땡큐 창 닫음 (드로우를 선택했으므로)
-  state.ty.open=false;
-  drawUI();
-  const targetEl = document.querySelector(`#hand .card[data-id="${newCard.id}"]`);
-  if(targetEl){ const toRect = targetEl.getBoundingClientRect(); flyCard(fromRect, toRect, newCard); }
-}
-
-function claimThankYou(playerIndex){
-  const player = state.players[playerIndex];
-  const chk = legalThankYouFor(player); if(!chk.allowed) return false;
-  if(!state.ty.open) return false;
-  if(state.ty.claimant && state.ty.claimant!==player.id) return false; // 이미 다른 사람이 먹음
-  // 선착순 집행
-  state.ty.claimant = player.id;
-  const topEl = document.querySelector('#discardCards .card');
-  const fromRect = topEl? topEl.getBoundingClientRect() : document.getElementById('discardZone').getBoundingClientRect();
-  const top=state.discard.pop(); player.hand.push(top);
-  state.mustUseThankYouCardId = top.id; // 반드시 즉시 사용
-  state.phase = (playerIndex===state.turnIndex) ? 'action' : state.phase; // 인터럽트지만 자신의 phase 강제하진 않음
-  showToast(`땡큐! ${player.name} 선점 ✅`);
-  drawUI();
-  const targetEl = document.querySelector(`#hand .card[data-id="${top.id}"]`);
-  if(targetEl){ const toRect = targetEl.getBoundingClientRect(); flyCard(fromRect, toRect, top); }
-  // 땡큐 창 닫음(선착순)
-  state.ty.open=false;
-  return true;
-}
-
-function takeThankYou(){ // UI에서 내 입장(0번 플레이어)
-  claimThankYou(0);
-}
-
-function registerSelected(kind){
-  const p=current(); if(state.phase==='choose-source'){ showToast('먼저 드로우 또는 땡큐'); return; }
-  const sel = selectedFromHand(); if(sel.length<1){ showToast('카드를 선택하세요'); return; }
-  if(state.mustUseThankYouCardId && !sel.some(c=>c.id===state.mustUseThankYouCardId)){
-    showToast('땡큐 카드부터 사용해야 해요'); return;
-  }
-  const m = classifyMeld(sel);
-  if(!m){ showToast('유효하지 않은 조합'); return; }
-  if(kind==='set' && m.kind!=='set') { showToast('세트 아님'); return; }
-  if(kind==='run' && m.kind!=='run') { showToast('런 아님'); return; }
-  if(m.kind==='seven' || kind===undefined || kind===m.kind){
-    p.hand = p.hand.filter(c=>!sel.includes(c));
-    state.melds.push(m);
-    logMsg(`${p.name} 등록: ${m.kind.toUpperCase()} (${pretty(m.cards)})`);
-    if(state.mustUseThankYouCardId && sel.some(c=>c.id===state.mustUseThankYouCardId)) state.mustUseThankYouCardId=null;
-    clearSelection(); drawUI(); if(afterAnyAction(p)) return; return;
-  }
-  showToast('요청한 종류와 일치하지 않음');
-}
-
-function attachSelected(){
-  const p=current(); if(state.phase==='choose-source'){ showToast('먼저 드로우 또는 땡큐'); return; }
-  const sel = selectedFromHand(); if(sel.length!==1){ showToast('붙이기는 1장만 선택'); return; }
-  const card=sel[0];
-  if(state.mustUseThankYouCardId && card.id!==state.mustUseThankYouCardId){ showToast('땡큐 카드부터 사용해야 해요'); return; }
-  for(let i=0;i<state.melds.length;i++){
-    const m=state.melds[i]; if(canAttach(card,m)){
-      p.hand = p.hand.filter(c=>c!==card); m.cards.push(card); m.cards = sortByRank(m.cards);
-      logMsg(`${p.name} 붙이기: ${card.rank}${card.suit} → #${i+1}`);
-      if(state.mustUseThankYouCardId===card.id) state.mustUseThankYouCardId=null;
-      drawUI(); afterAnyAction(p); return;
-    }
-  }
-  showToast('붙일 수 있는 곳이 없어요');
-}
-
-let pendingDiscard=null;
-function setDiscard(){
-  const p=current(); if(state.phase==='choose-source'){ showToast('먼저 드로우 또는 땡큐'); return; }
-  if(state.mustUseThankYouCardId){ showToast('땡큐 카드 먼저 사용해야 버릴 수 있어요'); return; }
-  const sel = selectedFromHand(); if(sel.length!==1){ showToast('버리기는 1장 선택'); return; }
-  pendingDiscard = sel[0];
-  document.getElementById('btnDiscard').disabled=false;
-  drawUI();
-}
-function commitDiscard(){
-  const p=current();
-  if(state.mustUseThankYouCardId){ showToast('땡큐 카드 먼저 사용!'); return; }
-  if(!pendingDiscard){ const sel=selectedFromHand(); if(sel.length===1) pendingDiscard=sel[0]; }
-  if(!pendingDiscard){ showToast('버릴 카드를 1장 선택하세요'); return; }
-  const fromEl = document.querySelector(`#hand .card[data-id="${pendingDiscard.id}"]`);
-  const fromRect = fromEl? fromEl.getBoundingClientRect() : document.getElementById('hand').getBoundingClientRect();
-  p.hand = p.hand.filter(c=>c!==pendingDiscard);
-  state.discard.push(pendingDiscard); logMsg(`${p.name} 버림: ${cardText(pendingDiscard)}`);
-  const justDiscarded = pendingDiscard;
-  pendingDiscard=null; document.getElementById('btnDiscard').disabled=true; clearSelection();
-  // 땡큐 선착순 창 오픈
-  state.ty = { open:true, claimant:null, fromPlayerId:p.id, cardId:justDiscarded.id };
-  drawUI();
-  const topEl = document.querySelector('#discardCards .card');
-  if(topEl){ const toRect = topEl.getBoundingClientRect(); flyCard(fromRect, toRect, justDiscarded); }
-  // 봇이 먼저 외칠 수 있으면 즉시 선점
-  const nextIdx = nextActiveIndex(state.turnIndex);
-  const bot = state.players[nextIdx];
-  if(bot?.isBot){
-    const chk = legalThankYouFor(bot);
-    if(chk.allowed){
-      claimThankYou(nextIdx);
-      // 땡큐로 가져온 즉시 사용 시도
-      // 등록 우선 → 붙이기
-      const combos = kComb(bot.hand,1,5).sort((a,b)=>b.length-a.length);
-      for(const cs of combos){ const m=classifyMeld(cs); if(m && cs.some(c=>c.id===state.mustUseThankYouCardId)){ bot.hand = bot.hand.filter(c=>!cs.includes(c)); state.melds.push(m); logMsg(`Bot(땡큐) 등록: ${m.kind.toUpperCase()}`); state.mustUseThankYouCardId=null; break; } }
-      if(state.mustUseThankYouCardId){ // 아직 사용 못했으면 붙이기 탐색
-        for(let j=0;j<state.melds.length;j++){ const top = bot.hand.find(c=>c.id===state.mustUseThankYouCardId); if(top && canAttach(top,state.melds[j])){ bot.hand = bot.hand.filter(x=>x!==top); state.melds[j].cards.push(top); state.melds[j].cards=sortByRank(state.melds[j].cards); logMsg('Bot(땡큐) 붙이기'); state.mustUseThankYouCardId=null; break; } }
+      function buildRoster(count) {
+        var roster = [];
+        for (var i = 0; i < humanNames.length && roster.length < count; i++) {
+          roster.push({ name: humanNames[i], bot: false });
+        }
+        var botIndex = 0;
+        while (roster.length < count) {
+          var label = botNames[botIndex % botNames.length] + ' #' + (Math.floor(botIndex / botNames.length) + 1);
+          roster.push({ name: label, bot: true });
+          botIndex++;
+        }
+        return roster;
       }
-    }
-  }
-  if(afterAnyAction(p)) return;
-  endTurn(); drawUI(); maybeBotTurn();
-}
 
-function reshuffleFromDiscard(){
-  if(state.discard.length<2) return; // keep top
-  const top = state.discard.pop();
-  state.deck = shuffle(state.discard); state.discard=[top];
-  showToast('버린 패를 섞어 덱 보충');
-}
-
-// ====== Bot (human-like delay) ======
-function maybeBotTurn(){
-  const p=current(); if(!p.isBot || state.phase==='gameover') return;
-  const delay = (ms)=>new Promise(res=>setTimeout(res, ms));
-  (async()=>{ await delay(300 + Math.random()*500); await botActAsync(delay); })();
-}
-async function botActAsync(delay){
-  const p=current(); if(!p.isBot || p.status!=='active') return;
-  if(state.phase==='choose-source'){
-    await delay(200+Math.random()*400);
-    // 땡큐 선점 가능 시도(자기 턴 시작에도 열려있다면)
-    if(state.ty.open && !state.ty.claimant){
-      const chk = legalThankYouFor(p);
-      if(chk.allowed){ claimThankYou(state.turnIndex); drawUI(); return botActAsync(delay); }
-    }
-    drawFromDeck(); drawUI(); return botActAsync(delay);
-  }
-  const tryRegister = async () => {
-    const combos = kComb(p.hand,1,5).sort((a,b)=>b.length-a.length);
-    for(const cs of combos){ const m=classifyMeld(cs); if(m){
-      await delay(220+Math.random()*380);
-      p.hand = p.hand.filter(c=>!cs.includes(c)); state.melds.push(m);
-      logMsg(`Bot 등록: ${m.kind.toUpperCase()} (${pretty(m.cards)})`);
-      drawUI(); if(afterAnyAction(p)) return true; return tryRegister();
-    }} return false;
-  };
-  if(await tryRegister()) return;
-  for(let i=0;i<p.hand.length;i++){
-    const c=p.hand[i];
-    for(let j=0;j<state.melds.length;j++){
-      if(canAttach(c,state.melds[j])){
-        await delay(180+Math.random()*300);
-        p.hand.splice(i,1); state.melds[j].cards.push(c); state.melds[j].cards=sortByRank(state.melds[j].cards);
-        logMsg(`Bot 붙이기: ${cardText(c)} → #${j+1}`);
-        drawUI(); if(afterAnyAction(p)) return; i=-1; break;
+      function renderSeats(roster) {
+        seatRing.innerHTML = '';
+        var radius = roster.length >= 5 ? 240 : roster.length === 3 ? 210 : 225;
+        var startAngle = -90;
+        for (var i = 0; i < roster.length; i++) {
+          var player = roster[i];
+          var angle = startAngle + (360 / roster.length) * i;
+          var li = document.createElement('li');
+          li.dataset.bot = String(player.bot);
+          li.innerHTML = '<strong>' + player.name + '</strong>' +
+            '<span>' + (player.bot ? '자동 플레이어' : '사람 플레이어') + '</span>';
+          var transform = 'translate(-50%, -50%) rotate(' + angle + 'deg) translate(0, -' + radius + 'px) rotate(' + (-angle) + 'deg)';
+          li.style.transform = transform;
+          seatRing.appendChild(li);
+        }
       }
-    }
-  }
-  await delay(220+Math.random()*380);
-  let candIndex=0, bestScore=-1;
-  for(let i=0;i<p.hand.length;i++){
-    const c=p.hand[i];
-    const rv=rankValue(c.rank); const suitScore = p.hand.filter(x=>x.suit===c.suit).length;
-    const rankScore = p.hand.filter(x=>x.rank===c.rank).length;
-    const score = rv + (1/(suitScore||1))*4 + (1/(rankScore||1))*6;
-    if(score>bestScore){bestScore=score; candIndex=i;}
-  }
-  const dc = p.hand.splice(candIndex,1)[0]; state.discard.push(dc); logMsg(`Bot 버림: ${cardText(dc)}`);
-  // 땡큐 창 오픈
-  state.ty = { open:true, claimant:null, fromPlayerId:p.id, cardId:dc.id };
-  drawUI(); if(afterAnyAction(p)) return; endTurn(); drawUI();
-}
 
-// ====== UI ======
-function drawUI(){
-  document.getElementById('opt-continue').checked = state.options.continueAfterOut;
-  document.getElementById('turnBadge').textContent = `턴: ${current().name}`;
-  document.getElementById('roundInfo').textContent = `R${state.round}${state.phase==='gameover'?' · 게임끝':''}`;
-
-  const deckCount = document.getElementById('deckCount'); deckCount.textContent = `남은 장수: ${state.deck.length}`;
-
-  const dc = document.getElementById('discardCards'); dc.innerHTML='';
-  const top = state.discard[state.discard.length-1]; if(top) { const el=cardEl(top,false); el.classList.add('enter'); dc.appendChild(el); }
-
-  const mwrap = document.getElementById('melds'); mwrap.innerHTML='';
-  state.melds.forEach((m,i)=>{
-    const d=document.createElement('div'); d.className='meld enter';
-    const title=document.createElement('div'); title.style.fontSize='12px'; title.style.color='var(--muted)';
-    title.textContent = `#${i+1} · ${m.kind.toUpperCase()} (${m.cards.length})`;
-    const row=document.createElement('div'); row.className='cards';
-    m.cards.forEach(c=>{ const el=cardEl(c,false); el.classList.add('enter'); row.appendChild(el); });
-    d.appendChild(title); d.appendChild(row); mwrap.appendChild(d);
-  });
-
-  const h = document.getElementById('hand'); h.innerHTML='';
-  const me = state.players[0];
-  me.hand.sort((a,b)=> (a.suit===b.suit? rankValue(a.rank)-rankValue(b.rank) : a.suit.localeCompare(b.suit)));
-  me.hand.forEach(c=> { const el=cardEl(c,true); el.classList.add('enter'); h.appendChild(el); });
-
-  const plist=document.getElementById('players'); plist.innerHTML='';
-  state.players.forEach((p)=>{
-    const line=document.createElement('div'); line.style.display='flex'; line.style.justifyContent='space-between'; line.style.margin='6px 0';
-    const left=document.createElement('div'); left.textContent = `${p.name} ${p.isBot?'🤖':'🙂'}`;
-    const right=document.createElement('div'); right.innerHTML = `<span class="rankpill">${p.status==='active'?`hand ${p.hand.length}`:'OUT'}</span>`;
-    line.appendChild(left); line.appendChild(right); plist.appendChild(line);
-  });
-
-  const f=document.getElementById('finish'); f.innerHTML='';
-  state.finishOrder.forEach((pid,idx)=>{
-    const li=document.createElement('li'); const nm = state.players.find(p=>p.id===pid)?.name||pid; li.textContent = `${idx+1}등 · ${nm}`; f.appendChild(li);
-  });
-
-  const meTurn = current().id==='P1' && state.players[0].status==='active' && state.phase!=='gameover';
-  document.getElementById('btnDraw').disabled = !meTurn || state.phase!=='choose-source';
-  // 땡큐 버튼: 선착순 창 열려 있고, 내가 선점 안 당했고, 즉시 사용 가능해야 함
-  const tyCheck = legalThankYouFor(state.players[0]);
-  const tyBtn=document.getElementById('btnTY');
-  tyBtn.disabled = !(state.ty.open && (!state.ty.claimant || state.ty.claimant==='P1') && tyCheck.allowed);
-  tyBtn.classList.toggle('pulse', !tyBtn.disabled);
-}
-
-function cardEl(card, selectable){
-  const d=document.createElement('div'); d.className='card'; d.dataset.id=card.id; if(selectable) d.addEventListener('click',()=>toggleSelect(card.id,d));
-  const inner=document.createElement('div'); inner.className='inner';
-  const rank=document.createElement('div'); rank.className='rank ' + (isRed(card.suit)?'red':'black'); rank.textContent=card.rank;
-  const suit=document.createElement('div'); suit.className='suit ' + (isRed(card.suit)?'red':'black'); suit.textContent=card.suit;
-  inner.appendChild(rank); inner.appendChild(suit); d.appendChild(inner); return d;
-}
-
-const selected = new Set();
-function toggleSelect(id, el){ if(selected.has(id)){ selected.delete(id); el.classList.remove('selected'); } else { selected.add(id); el.classList.add('selected'); } updateDiscardButtonState(); }
-function selectedFromHand(){ const me=state.players[0]; const ids=[...selected]; const out=[]; ids.forEach(id=>{ const c=me.hand.find(x=>x.id===id); if(c) out.push(c); }); return out; }
-function clearSelection(){ selected.clear(); updateDiscardButtonState(); }
-
-// ====== UX helpers ======
-function flyCard(fromRect, toRect, card){
-  const f=document.createElement('div'); f.className='flycard';
-  const r=document.createElement('div'); r.className='flyrank'; r.textContent=card.rank; r.style.color=(isRed(card.suit)?'#e34d5c':'#2b2f3a');
-  const s=document.createElement('div'); s.className='flysuit'; s.textContent=card.suit; s.style.color=(isRed(card.suit)?'#e34d5c':'#2b2f3a');
-  f.appendChild(r); f.appendChild(s);
-  document.body.appendChild(f);
-  const startX = fromRect.left + (fromRect.width/2) - 35;
-  const startY = fromRect.top + (fromRect.height/2) - 49;
-  f.style.transform = `translate(${startX}px, ${startY}px)`; f.style.opacity = .7;
-  f.getBoundingClientRect();
-  const endX = toRect.left + (toRect.width/2) - 35;
-  const endY = toRect.top + (toRect.height/2) - 49;
-  requestAnimationFrame(()=>{ f.style.transform = `translate(${endX}px, ${endY}px)`; f.style.opacity=1; });
-  setTimeout(()=>{ f.remove(); }, 300);
-}
-function showToast(message, ms=1200){
-  const t = document.getElementById('toast'); if(!t){ console.warn('toast element missing'); return; }
-  t.textContent = message; t.style.display = 'block';
-  clearTimeout(window.__toastTimer); window.__toastTimer = setTimeout(()=>{ t.style.display='none'; }, ms);
-}
-function logMsg(msg){ const l=document.getElementById('log'); if(!l){ console.log('[LOG]', msg); return; } const line=document.createElement('div'); line.textContent=msg; l.appendChild(line); l.scrollTop=l.scrollHeight; }
-function cardText(c){ return `${c.rank}${c.suit}`; }
-function pretty(cards){ return cards.map(cardText).join(' '); }
-function updateDiscardButtonState(){ const btn = document.getElementById('btnDiscard'); const meTurn = current().id==='P1' && state.players[0].status==='active' && state.phase!=='gameover'; const one = selectedFromHand().length===1; btn.disabled = !(meTurn && state.phase!=='choose-source' && one && !state.mustUseThankYouCardId); }
-
-// ====== Networking (P2P WebRTC, copy-paste SDP) ======
-const net = { role:null, pc:null, dc:null, online:false, isHost:false };
-const netBadge = ()=>document.getElementById('netBadge');
-
-async function hostStart(){
-  net.role='host'; net.isHost=true; net.pc=new RTCPeerConnection();
-  net.dc = net.pc.createDataChannel('hoola');
-  wireDataChannel(net.dc);
-  const offer = await net.pc.createOffer(); await net.pc.setLocalDescription(offer);
-  document.getElementById('sdpOut').value = btoa(JSON.stringify(net.pc.localDescription));
-  net.pc.onicecandidate = (e)=>{ if(!e.candidate){ document.getElementById('sdpOut').value = btoa(JSON.stringify(net.pc.localDescription)); }}
-}
-async function guestStart(){
-  net.role='guest'; net.isHost=false; net.pc=new RTCPeerConnection();
-  net.pc.ondatachannel = (e)=>{ net.dc=e.channel; wireDataChannel(net.dc); };
-  const offerStr = document.getElementById('sdpIn').value.trim(); if(!offerStr) return showToast('호스트 코드를 붙여넣으세요');
-  const offer = JSON.parse(atob(offerStr));
-  await net.pc.setRemoteDescription(offer);
-  const answer = await net.pc.createAnswer(); await net.pc.setLocalDescription(answer);
-  document.getElementById('sdpOut').value = btoa(JSON.stringify(net.pc.localDescription));
-  net.pc.onicecandidate = (e)=>{ if(!e.candidate){ document.getElementById('sdpOut').value = btoa(JSON.stringify(net.pc.localDescription)); }}
-}
-async function hostApplyAnswer(){ const ansStr = document.getElementById('sdpIn').value.trim(); if(!ansStr) return showToast('게스트 코드를 붙여넣으세요'); const ans = JSON.parse(atob(ansStr)); await net.pc.setRemoteDescription(ans); }
-function wireDataChannel(dc){
-  dc.onopen=()=>{ net.online=true; netBadge().textContent='온라인'; netBadge().style.background='#eaffea'; netBadge().style.color='#137a13';
-    state.players = [ { id:'P1', name: net.isHost? 'You(Host)':'You', isBot:false, hand:[], status:'active' }, { id:'P2', name: net.isHost? 'Guest':'Host', isBot:false, hand:[], status:'active' }, ];
-    if(net.isHost){ newGame(); sendSnapshot(); }
-  };
-  dc.onmessage=(e)=>{
-    const msg = JSON.parse(e.data);
-    if(msg.t==='snapshot'){ Object.assign(state, msg.state); drawUI(); return; }
-    if(!net.isHost){ return; }
-    handleRemoteAction(msg);
-  };
-}
-function sendSnapshot(){ if(net.online && net.dc?.readyState==='open'){ net.dc.send(JSON.stringify({t:'snapshot', state})); }}
-function sendAction(a){ if(net.online && net.dc?.readyState==='open'){ net.dc.send(JSON.stringify(a)); }}
-
-function handleRemoteAction(a){
-  // 호스트가 선착순 판정 및 모든 검증을 수행
-  switch(a.t){
-    case 'draw': if(current().id==='P2') { drawFromDeck(); drawUI(); } break;
-    case 'thankyou-claim': {
-      // 원격도 선착순
-      if(state.ty.open && !state.ty.claimant){
-        const idx = state.players.findIndex(p=>p.id==='P2');
-        claimThankYou(idx);
-        drawUI();
+      function renderLog(roster) {
+        logList.innerHTML = '';
+        var now = new Date();
+        var base = document.createElement('li');
+        base.textContent = now.getHours().toString().padStart(2, '0') + ':' +
+          now.getMinutes().toString().padStart(2, '0') + ' — 라운드가 시작되었습니다.';
+        logList.appendChild(base);
+        for (var i = 0; i < roster.length; i++) {
+          var item = document.createElement('li');
+          var action = activity[i % activity.length];
+          item.textContent = roster[i].name + ' : ' + action;
+          logList.appendChild(item);
+        }
       }
-    } break;
-    case 'register': {
-      if(current().id!=='P2' || state.phase==='gameover') break;
-      const p = state.players[1];
-      const cards = p.hand.filter(c=>a.ids.includes(c.id));
-      if(state.mustUseThankYouCardId && !cards.some(c=>c.id===state.mustUseThankYouCardId)) break;
-      const m = classifyMeld(cards);
-      if(!m) break; if(a.kind && m.kind!==a.kind) break;
-      p.hand = p.hand.filter(c=>!cards.includes(c)); state.melds.push(m); logMsg(`Remote 등록: ${m.kind}`);
-      if(state.mustUseThankYouCardId && cards.some(c=>c.id===state.mustUseThankYouCardId)) state.mustUseThankYouCardId=null;
-      afterAnyAction(p);
-    } break;
-    case 'attach': {
-      if(current().id!=='P2' || state.phase==='gameover') break;
-      const p=state.players[1]; const card=p.hand.find(c=>c.id===a.id); if(!card) break;
-      if(state.mustUseThankYouCardId && card.id!==state.mustUseThankYouCardId) break;
-      let targetIndex = -1; for(let j=0;j<state.melds.length;j++){ if(canAttach(card, state.melds[j])) { targetIndex=j; break; } }
-      if(targetIndex>=0){
-        const m=state.melds[targetIndex]; p.hand=p.hand.filter(x=>x!==card); m.cards.push(card); m.cards=sortByRank(m.cards); logMsg('Remote 붙이기');
-        if(state.mustUseThankYouCardId===card.id) state.mustUseThankYouCardId=null; afterAnyAction(p);
+
+      function syncBadgeText() {
+        var rosterInfo = modeBadge.dataset.roster ? ' · ' + modeBadge.dataset.roster : '';
+        modeBadge.textContent = currentModeLabel + rosterInfo;
       }
-    } break;
-    case 'discard': {
-      if(current().id!=='P2' || state.phase==='gameover') break;
-      if(state.mustUseThankYouCardId) break;
-      const p=state.players[1]; const card=p.hand.find(c=>c.id===a.id); if(!card) break; p.hand=p.hand.filter(x=>x!==card); state.discard.push(card);
-      state.ty = { open:true, claimant:null, fromPlayerId:p.id, cardId:card.id };
-      endTurn();
-    } break;
-  }
-  sendSnapshot();
-}
 
-// ====== Events ======
-const elDraw=document.getElementById('btnDraw');
-const elTY=document.getElementById('btnTY');
-const elRegSet=document.getElementById('btnRegSet');
-const elRegRun=document.getElementById('btnRegRun');
-const elAttach=document.getElementById('btnAttach');
-const elPendDiscard=document.getElementById('btnDiscard');
-const elReset=document.getElementById('btnReset');
+      function updateModeClass() {
+        if (window.innerWidth <= 768) {
+          document.body.classList.add('mobile');
+          currentModeLabel = 'Mobile Flat';
+        } else {
+          document.body.classList.remove('mobile');
+          currentModeLabel = 'Desktop 3D';
+        }
+        syncBadgeText();
+      }
 
-elDraw.onclick=()=>{ if(net.online && !net.isHost && current().id==='P2') sendAction({t:'draw'}); else { drawFromDeck(); sendSnapshot(); } };
-elTY.onclick=()=>{
-  if(net.online && !net.isHost){ sendAction({t:'thankyou-claim'}); }
-  else { takeThankYou(); sendSnapshot(); }
-};
-elRegSet.onclick=()=>{ const ids = selectedFromHand().map(c=>c.id); if(net.online && !net.isHost && current().id==='P2') sendAction({t:'register', kind:'set', ids}); else { registerSelected('set'); sendSnapshot(); } };
-elRegRun.onclick=()=>{ const ids = selectedFromHand().map(c=>c.id); if(net.online && !net.isHost && current().id==='P2') sendAction({t:'register', kind:'run', ids}); else { registerSelected('run'); sendSnapshot(); } };
-elAttach.onclick=()=>{ const sel = selectedFromHand(); if(sel.length!==1){ attachSelected(); sendSnapshot(); return; } const id = sel[0].id; if(net.online && !net.isHost && current().id==='P2') sendAction({t:'attach', id}); else { attachSelected(); sendSnapshot(); } };
+      function refresh(rosterSize, logOnly) {
+        var count = Math.max(3, Math.min(6, rosterSize));
+        var roster = buildRoster(count);
+        renderSeats(roster);
+        renderLog(roster);
+        if (!logOnly) {
+          var label = count + '명 · ' + roster.filter(function (p) { return p.bot; }).length + '봇 자동 참여';
+          modeBadge.dataset.roster = label;
+          modeBadge.setAttribute('title', label);
+        }
+        syncBadgeText();
+      }
 
-document.getElementById('hand').addEventListener('dblclick', ()=>{ setDiscard(); });
-elPendDiscard.onclick=()=>{
-  if(net.online && !net.isHost && current().id==='P2'){
-    const sel = selectedFromHand(); if(sel.length===1) sendAction({t:'discard', id: sel[0].id});
-  } else { commitDiscard(); sendSnapshot(); }
-};
+      seatSelect.addEventListener('change', function () {
+        var value = parseInt(seatSelect.value, 10);
+        refresh(value, false);
+      });
 
-document.getElementById('opt-continue').addEventListener('change', (e)=>{ state.options.continueAfterOut = e.target.checked; sendSnapshot(); });
+      reshuffle.addEventListener('click', function () {
+        refresh(parseInt(seatSelect.value, 10), true);
+      });
 
-elReset.onclick=()=>{ newGame(); sendSnapshot(); };
+      window.addEventListener('resize', updateModeClass);
 
-document.getElementById('btnHost').onclick=()=>hostStart();
-document.getElementById('btnJoin').onclick=()=>guestStart();
-document.getElementById('btnApply').onclick=()=>hostApplyAnswer();
-
-// ====== Unit Tests (lightweight) ======
-function runUnitTests(){
-  const results=[]; const rec=(name,ok,detail='')=>{ results.push({name,ok,detail}); (ok?console.log:console.error)(ok?`PASS: ${name}`:`FAIL: ${name} — ${detail}`); };
-  try{ rec('isSet valid 5x3', isSet([{rank:'5',suit:'♣'},{rank:'5',suit:'♥'},{rank:'5',suit:'♦'}])); }catch(e){ rec('isSet valid 5x3', false, e.message); }
-  try{ rec('isSet invalid len<3', !isSet([{rank:'5',suit:'♣'},{rank:'5',suit:'♥'}])); }catch(e){ rec('isSet invalid len<3', false, e.message); }
-  try{ rec('isSet invalid mismatch', !isSet([{rank:'5',suit:'♣'},{rank:'5',suit:'♥'},{rank:'6',suit:'♦'}])); }catch(e){ rec('isSet invalid mismatch', false, e.message); }
-  try{ rec('isRun 5-6-7 ♥', isRun([{rank:'5',suit:'♥'},{rank:'6',suit:'♥'},{rank:'7',suit:'♥'}])); }catch(e){ rec('isRun 5-6-7 ♥', false, e.message); }
-  try{ rec('isRun A-2-3 ♣ (low ace)', isRun([{rank:'A',suit:'♣'},{rank:'2',suit:'♣'},{rank:'3',suit:'♣'}])); }catch(e){ rec('isRun A-2-3 low', false, e.message); }
-  try{ rec('isRun Q-K-A ♦ (high ace)', isRun([{rank:'Q',suit:'♦'},{rank:'K',suit:'♦'},{rank:'A',suit:'♦'}])); }catch(e){ rec('isRun Q-K-A high', false, e.message); }
-  try{ rec('isRun no wrap K-A-2 ♠', !isRun([{rank:'K',suit:'♠'},{rank:'A',suit:'♠'},{rank:'2',suit:'♠'}])); }catch(e){ rec('isRun no wrap', false, e.message); }
-  try{ const m = classifyMeld([{rank:'7',suit:'♣'}]); rec('classify single 7 → seven', m && m.kind==='seven'); }catch(e){ rec('classify seven', false, e.message); }
-  try{ const setM = {kind:'set', cards:[{rank:'5',suit:'♥'},{rank:'5',suit:'♦'},{rank:'5',suit:'♠'}]}; rec('attach 5♣ to set', canAttach({rank:'5',suit:'♣'}, setM)); }catch(e){ rec('attach to set', false, e.message); }
-  try{ const runM = {kind:'run', cards: sortByRank([{rank:'2',suit:'♥'},{rank:'3',suit:'♥'},{rank:'4',suit:'♥'}])}; rec('attach 5♥ to run end', canAttach({rank:'5',suit:'♥'}, runM)); }catch(e){ rec('attach to run end 5', false, e.message); }
-  try{ const runM2 = {kind:'run', cards: sortByRank([{rank:'3',suit:'♥'},{rank:'4',suit:'♥'},{rank:'5',suit:'♥'}])}; rec('attach 2♥ to run start', canAttach({rank:'2',suit:'♥'}, runM2)); }catch(e){ rec('attach to run start 2', false, e.message); }
-  try{ const runM3 = {kind:'run', cards: sortByRank([{rank:'3',suit:'♥'},{rank:'4',suit:'♥'},{rank:'5',suit:'♥'}])}; rec('attach 6♥ to run end', canAttach({rank:'6',suit:'♥'}, runM3)); }catch(e){ rec('attach to run end 6', false, e.message); }
-  try{ const runM4 = {kind:'run', cards: sortByRank([{rank:'3',suit:'♥'},{rank:'4',suit:'♥'},{rank:'5',suit:'♥'}])}; rec('attach 4♥ (middle) not allowed', !canAttach({rank:'4',suit:'♥'}, runM4)); }catch(e){ rec('attach to run middle 4', false, e.message); }
-  try{ const sevenM = {kind:'seven', cards:[{rank:'7',suit:'♣'}]}; rec('cannot attach to solo seven', !canAttach({rank:'6',suit:'♣'}, sevenM)); }catch(e){ rec('seven attach rule', false, e.message); }
-  // ThankYou race: open & claimant null, two claim attempts -> first wins
-  try{
-    const tmp=JSON.parse(JSON.stringify(state));
-    state.players=[{id:'P1',name:'A',isBot:false,hand:[],status:'active'},{id:'P2',name:'B',isBot:false,hand:[],status:'active'}];
-    state.discard=[{id:'X',rank:'7',suit:'♣'}];
-    state.melds=[]; state.phase='choose-source';
-    state.ty={open:true, claimant:null, fromPlayerId:'P2', cardId:'X'};
-    // Give P1 a helping card to register 7 solo
-    const preLen = state.players[0].hand.length;
-    const c1 = claimThankYou(0);
-    const c2 = claimThankYou(1);
-    rec('thankyou first-come wins', c1===true && c2===false && state.players[0].hand.length===preLen+1);
-    Object.assign(state,tmp);
-  }catch(e){ rec('thankyou race rule', false, e.message); }
-  const ok = results.filter(r=>r.ok).length; const total = results.length; logMsg(`테스트: ${ok}/${total} 성공`); results.filter(r=>!r.ok).forEach(r=>logMsg(`❌ ${r.name} ${r.detail?'- '+r.detail:''}`));
-}
-
-runUnitTests();
-
-// boot
-newGame();
-</script>
+      updateModeClass();
+      refresh(parseInt(seatSelect.value, 10), false);
+    })();
+  </script>
 </body>
 </html>
