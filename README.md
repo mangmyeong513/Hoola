@@ -52,3 +52,13 @@ pnpm dev     # http://localhost:5173 에서 실행
 - `pnpm test:ui`: 간단한 비주얼 회귀 스냅샷 테스트(Table3D 모바일/데스크탑)
 
 테스트는 Vitest + Testing Library + jsdom 환경에서 실행되며, CSS를 로드해 레이아웃 클래스를 확인합니다.
+
+## Render 호스팅
+
+`render.yaml`이 포함되어 있어 Render에 Web Service로 배포할 수 있습니다.
+
+1. Render 대시보드에서 새 Web Service를 생성하고 이 저장소를 연결합니다.
+2. 빌드 커맨드: `npm install && npm run build`
+3. 시작 커맨드: `npm run start -- --host 0.0.0.0 --port $PORT`
+
+`vite.config.ts`에서 프리뷰 서버가 Render가 제공하는 포트를 자동으로 사용하도록 설정되어 있습니다.
