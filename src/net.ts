@@ -8,82 +8,87 @@ export type NetworkEvents = {
 
 type EventName = keyof NetworkEvents;
 
-type Listener<E extends EventName> = (payload: NetworkEvents[E]) => void;
+type Listener<E extends EventName> = NetworkEvents[E] extends void
+  ? () => void
+  : (payload: NetworkEvents[E]) => void;
 
 type EmitArgs<E extends EventName> = NetworkEvents[E] extends void
   ? []
   : [NetworkEvents[E]];
 
-class Emitter {
-  private listeners = new Map<EventName, Set<Listener<EventName>>>();
+class TypedEmitter {
+  private buckets: { [K in EventName]?: Set<Listener<K>> } = {};
 
-  on<E extends EventName>(event: E, listener: Listener<E>): void {
-    const eventListeners = this.listeners.get(event) ?? new Set<Listener<EventName>>();
-    eventListeners.add(listener as Listener<EventName>);
-    this.listeners.set(event, eventListeners);
+  on<E extends EventName>(event: E, listener: Listener<E>): () => void {
+    const bucket = (this.buckets[event] ??= new Set()) as Set<Listener<E>>;
+    bucket.add(listener);
+    return () => this.off(event, listener);
   }
 
   off<E extends EventName>(event: E, listener: Listener<E>): void {
-    const eventListeners = this.listeners.get(event);
-    if (!eventListeners) return;
-    eventListeners.delete(listener as Listener<EventName>);
-    if (eventListeners.size === 0) {
-      this.listeners.delete(event);
+    const bucket = this.buckets[event] as Set<Listener<E>> | undefined;
+    if (!bucket) return;
+
+    bucket.delete(listener);
+    if (bucket.size === 0) {
+      delete this.buckets[event];
     }
   }
 
   emit<E extends EventName>(event: E, ...payload: EmitArgs<E>): void {
-    const eventListeners = this.listeners.get(event);
-    if (!eventListeners) return;
+    const bucket = this.buckets[event] as Set<Listener<E>> | undefined;
+    if (!bucket) return;
 
+    const listeners = [...bucket];
     if (payload.length === 0) {
-      for (const listener of eventListeners) {
-        (listener as Listener<E>)(undefined as NetworkEvents[E]);
+      for (const listener of listeners) {
+        (listener as () => void)();
       }
       return;
     }
 
-    const [detail] = payload as [NetworkEvents[E]];
-    for (const listener of eventListeners) {
-      (listener as Listener<E>)(detail);
+    const [detail] = payload;
+    for (const listener of listeners) {
+      (listener as (value: NetworkEvents[E]) => void)(detail as NetworkEvents[E]);
     }
   }
 }
 
-const emitter = new Emitter();
+const emitter = new TypedEmitter();
 
 export function on<E extends EventName>(event: E, listener: Listener<E>): () => void {
-  emitter.on(event, listener);
-  return () => emitter.off(event, listener);
+  return emitter.on(event, listener);
 }
+
+export function off<E extends EventName>(event: E, listener: Listener<E>): void {
+  emitter.off(event, listener);
+}
+
+const reactions: { [K in EventName]: (...args: EmitArgs<K>) => void } = {
+  'player:join': (detail: NetworkEvents['player:join']) => {
+    const store = useStore.getState();
+    store.addPlayer({ id: detail.id, name: detail.name });
+    store.enqueueToast({ message: `🔔 ${detail.name} 입장!`, tone: 'success' });
+  },
+  'player:leave': (detail: NetworkEvents['player:leave']) => {
+    const store = useStore.getState();
+    store.removePlayer(detail.id);
+    store.enqueueToast({ message: `👋 ${detail.id} 퇴장`, tone: 'warning' });
+  },
+  'deck:reshuffle': () => {
+    const store = useStore.getState();
+    store.showReshuffle();
+    store.enqueueToast({ message: '♻️ 버린 패 재섞기', tone: 'info' });
+  }
+};
 
 export function emit<E extends EventName>(event: E, ...payload: EmitArgs<E>): void {
   emitter.emit(event, ...payload);
-  const store = useStore.getState();
-  switch (event) {
-    case 'player:join': {
-      const [detail] = payload as EmitArgs<'player:join'>;
-      store.addPlayer({ id: detail.id, name: detail.name });
-      store.enqueueToast({ message: `🔔 ${detail.name} 입장!`, tone: 'success' });
-      break;
-    }
-    case 'player:leave': {
-      const [detail] = payload as EmitArgs<'player:leave'>;
-      store.removePlayer(detail.id);
-      store.enqueueToast({ message: `👋 ${detail.id} 퇴장`, tone: 'warning' });
-      break;
-    }
-    case 'deck:reshuffle': {
-      store.showReshuffle();
-      store.enqueueToast({ message: '♻️ 버린 패 재섞기', tone: 'info' });
-      break;
-    }
-    default:
-      break;
-  }
+  const reaction = reactions[event] as ((...args: EmitArgs<E>) => void) | undefined;
+  reaction?.(...payload);
 }
 
-export function simulateJoin(name: string, id = crypto.randomUUID()) {
+export function simulateJoin(name: string, id = crypto.randomUUID()): void {
   emit('player:join', { id, name });
 }
 
