@@ -14,7 +14,8 @@
     players: [],
     log: [],
     currentTurn: 0,
-    pendingBot: false
+    pendingBot: false,
+    botTimeoutId: null
   };
 
   var localPlayerName = 'YOU';
@@ -130,10 +131,18 @@
     maybeBotTurn();
   }
 
+  function clearBotTimer() {
+    if (state.botTimeoutId !== null) {
+      window.clearTimeout(state.botTimeoutId);
+      state.botTimeoutId = null;
+    }
+  }
+
   function maybeBotTurn() {
     var player = currentPlayer();
     if (!player || !player.isBot) {
       state.pendingBot = false;
+      clearBotTimer();
       drawUI();
       return;
     }
@@ -142,14 +151,17 @@
     }
     state.pendingBot = true;
     drawUI();
-    window.setTimeout(function () {
+    clearBotTimer();
+    state.botTimeoutId = window.setTimeout(function () {
       pushLog(player.name + '이(가) 자동으로 드로우했습니다.');
       state.pendingBot = false;
+      state.botTimeoutId = null;
       advanceTurn();
     }, 600);
   }
 
   function newGame(seatCount) {
+    clearBotTimer();
     var count = clampSeatCount(seatCount);
     state.seatCount = count;
     state.currentTurn = 0;
