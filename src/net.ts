@@ -1,4 +1,3 @@
-import { EventEmitter } from 'events';
 import { useStore } from './store';
 
 export type NetworkEvents = {
@@ -7,29 +6,71 @@ export type NetworkEvents = {
   'deck:reshuffle': void;
 };
 
-const emitter = new EventEmitter();
-
 type EventName = keyof NetworkEvents;
 
 type Listener<E extends EventName> = (payload: NetworkEvents[E]) => void;
 
-export function on<E extends EventName>(event: E, listener: Listener<E>): () => void {
-  emitter.on(event, listener as (...args: unknown[]) => void);
-  return () => emitter.off(event, listener as (...args: unknown[]) => void);
+type EmitArgs<E extends EventName> = NetworkEvents[E] extends void
+  ? []
+  : [NetworkEvents[E]];
+
+class Emitter {
+  private listeners = new Map<EventName, Set<Listener<EventName>>>();
+
+  on<E extends EventName>(event: E, listener: Listener<E>): void {
+    const eventListeners = this.listeners.get(event) ?? new Set<Listener<EventName>>();
+    eventListeners.add(listener as Listener<EventName>);
+    this.listeners.set(event, eventListeners);
+  }
+
+  off<E extends EventName>(event: E, listener: Listener<E>): void {
+    const eventListeners = this.listeners.get(event);
+    if (!eventListeners) return;
+    eventListeners.delete(listener as Listener<EventName>);
+    if (eventListeners.size === 0) {
+      this.listeners.delete(event);
+    }
+  }
+
+  emit<E extends EventName>(event: E, ...payload: EmitArgs<E>): void {
+    const eventListeners = this.listeners.get(event);
+    if (!eventListeners) return;
+
+    if (payload.length === 0) {
+      for (const listener of eventListeners) {
+        (listener as Listener<E>)(undefined as NetworkEvents[E]);
+      }
+      return;
+    }
+
+    const [detail] = payload as [NetworkEvents[E]];
+    for (const listener of eventListeners) {
+      (listener as Listener<E>)(detail);
+    }
+  }
 }
 
-export function emit<E extends EventName>(event: E, payload: NetworkEvents[E]): void {
-  emitter.emit(event, payload);
+const emitter = new Emitter();
+
+export function on<E extends EventName>(event: E, listener: Listener<E>): () => void {
+  emitter.on(event, listener);
+  return () => emitter.off(event, listener);
+}
+
+export function emit<E extends EventName>(event: E, ...payload: EmitArgs<E>): void {
+  emitter.emit(event, ...payload);
   const store = useStore.getState();
   switch (event) {
     case 'player:join': {
-      store.addPlayer({ id: payload.id, name: payload.name });
-      store.enqueueToast({ message: `🔔 ${payload.name} 입장!`, tone: 'success' });
+      const [detail] = payload as EmitArgs<'player:join'>;
+      store.addPlayer({ id: detail.id, name: detail.name });
+      store.enqueueToast({ message: `🔔 ${detail.name} 입장!`, tone: 'success' });
       break;
     }
     case 'player:leave': {
-      store.removePlayer(payload.id);
-      store.enqueueToast({ message: `👋 ${payload.id} 퇴장`, tone: 'warning' });
+      const [detail] = payload as EmitArgs<'player:leave'>;
+      store.removePlayer(detail.id);
+      store.enqueueToast({ message: `👋 ${detail.id} 퇴장`, tone: 'warning' });
       break;
     }
     case 'deck:reshuffle': {
