@@ -1,0 +1,32 @@
+@media (max-width: 768px) {
+  .app__content {
+    padding: 24px 16px 96px;
+  }
+
+  .page {
+    gap: 24px;
+  }
+
+  .form,
+  .settings__group {
+    padding: 24px;
+  }
+
+  .table-view__seats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pager {
+    width: calc(100% - 24px);
+  }
+}
+
+@media (min-width: 1280px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .app--desktop .app__content {
+    max-width: 1280px;
+  }
+}
