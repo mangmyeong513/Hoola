@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "start": "vite preview",
     "test": "vitest",
     "test:ui": "vitest run src/ui/__tests__/visual.test.tsx"
   },
